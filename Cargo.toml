@@ -9,3 +9,6 @@ egui-wgpu = { version = "0.31.1", features = ["winit"] }
 egui-winit = "0.31.1"
 winit = "0.30.9"
 pollster = "0.4.0"
+wasmtime = "33.0.0"
+log = "0.4.27"
+env_logger = "0.11.8"

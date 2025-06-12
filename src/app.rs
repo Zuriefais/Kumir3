@@ -1,6 +1,7 @@
 use crate::egui_tools::EguiRenderer;
 use egui_wgpu::wgpu::SurfaceError;
 use egui_wgpu::{ScreenDescriptor, wgpu};
+use log::info;
 use std::sync::Arc;
 use winit::application::ApplicationHandler;
 use winit::dpi::PhysicalSize;
@@ -109,8 +110,8 @@ impl App {
 
     async fn set_window(&mut self, window: Window) {
         let window = Arc::new(window);
-        let initial_width = 1360;
-        let initial_height = 768;
+        let initial_width = 1920;
+        let initial_height = 1080;
 
         let _ = window.request_inner_size(PhysicalSize::new(initial_width, initial_height));
 
@@ -143,7 +144,7 @@ impl App {
         if let Some(window) = self.window.as_ref() {
             if let Some(min) = window.is_minimized() {
                 if min {
-                    println!("Window is minimized");
+                    info!("Window is minimized");
                     return;
                 }
             }
@@ -162,7 +163,7 @@ impl App {
         match surface_texture {
             Err(SurfaceError::Outdated) => {
                 // Ignoring outdated to allow resizing and minimization
-                println!("wgpu surface outdated");
+                info!("wgpu surface outdated");
                 return;
             }
             Err(_) => {
@@ -186,7 +187,9 @@ impl App {
 
         {
             state.egui_renderer.begin_frame(window);
-
+            egui::SidePanel::left("IDE").show(state.egui_renderer.context(), |ui| {
+                ui.label("Самое современное IDE")
+            });
             egui::Window::new("winit + egui + wgpu says hello!")
                 .resizable(true)
                 .vscroll(true)
@@ -195,7 +198,7 @@ impl App {
                     ui.label("Label!");
 
                     if ui.button("Button!").clicked() {
-                        println!("boom!")
+                        info!("boom!")
                     }
 
                     ui.separator();
@@ -246,7 +249,7 @@ impl ApplicationHandler for App {
 
         match event {
             WindowEvent::CloseRequested => {
-                println!("The close button was pressed; stopping");
+                info!("The close button was pressed; stopping");
                 event_loop.exit();
             }
             WindowEvent::RedrawRequested => {

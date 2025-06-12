@@ -1,0 +1,15 @@
+package kumir:three@0.1.0;
+
+interface core {
+    info: func(text: string);
+    warn: func(text: string);
+    error: func(text: string);
+    debug: func(text: string);
+    trace: func(text: string);
+}
+
+world zurie-mod {
+    import core;
+
+    export init: func();
+}
