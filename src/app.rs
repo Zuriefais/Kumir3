@@ -1,5 +1,6 @@
 use crate::egui_tools::EguiRenderer;
 use crate::gruvbox_egui::gruvbox_dark_theme;
+use crate::gui::KumirGui;
 use egui_wgpu::wgpu::SurfaceError;
 use egui_wgpu::{ScreenDescriptor, wgpu};
 use log::info;
@@ -17,6 +18,7 @@ pub struct AppState {
     pub surface: wgpu::Surface<'static>,
     pub scale_factor: f32,
     pub egui_renderer: EguiRenderer,
+    pub kumir_gui: KumirGui,
 }
 
 impl AppState {
@@ -77,6 +79,8 @@ impl AppState {
 
         let scale_factor = 1.0;
 
+        let kumir_gui = KumirGui::new(egui_renderer.context());
+
         Self {
             device,
             queue,
@@ -84,6 +88,7 @@ impl AppState {
             surface_config,
             egui_renderer,
             scale_factor,
+            kumir_gui,
         }
     }
 
@@ -189,10 +194,7 @@ impl App {
 
         {
             state.egui_renderer.begin_frame(window);
-            egui::SidePanel::left("IDE").show(state.egui_renderer.context(), |ui| {
-                ui.label("Самое современное IDE")
-            });
-
+            state.kumir_gui.render_gui();
             state.egui_renderer.end_frame_and_draw(
                 &state.device,
                 &state.queue,
