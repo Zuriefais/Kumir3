@@ -1,3 +1,5 @@
+use std::fmt;
+
 use egui::Context;
 use egui_extras::syntax_highlighting::{CodeTheme, highlight};
 
@@ -5,6 +7,30 @@ pub struct KumirGui {
     egui_context: Context,
     code: String,
     lang: String,
+    selected_mode: Modes,
+}
+
+#[derive(PartialEq, Eq, Clone)]
+enum Modes {
+    None,
+    Kuznechik,
+    Vodolei,
+    Cherepaha,
+    Chertezhnik,
+    Robot,
+}
+
+impl fmt::Display for Modes {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Modes::None => write!(f, "Не выбрано"),
+            Modes::Kuznechik => write!(f, "Кузнечик"),
+            Modes::Vodolei => write!(f, "Водолей"),
+            Modes::Robot => write!(f, "Робот"),
+            Modes::Chertezhnik => write!(f, "Чертежник"),
+            Modes::Cherepaha => write!(f, "Черепаха"),
+        }
+    }
 }
 
 impl KumirGui {
@@ -13,6 +39,7 @@ impl KumirGui {
             egui_context: context.clone(),
             code: "fn main() {\n    println!(\"Hello, world!\");\n}".to_string(),
             lang: "Rust".to_string(),
+            selected_mode: Modes::None,
         };
         gui
     }
@@ -70,5 +97,35 @@ impl KumirGui {
                     );
                 });
             });
+
+        egui::TopBottomPanel::top("tools").show(&self.egui_context, |ui| {
+            ui.horizontal(|ui| {
+                if ui.add(egui::Button::new("Запусить").frame(false)).clicked() {
+                    println!("Something should run");
+                }
+
+                if ui
+                    .add(egui::Button::new("Остановить").frame(false))
+                    .clicked()
+                {
+                    println!("Something should stop");
+                }
+
+                egui::ComboBox::from_id_salt("mode")
+                    .selected_text(self.selected_mode.to_string())
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut self.selected_mode, Modes::None, "Не выбрано");
+                        ui.selectable_value(&mut self.selected_mode, Modes::Kuznechik, "Кузнечик");
+                        ui.selectable_value(&mut self.selected_mode, Modes::Vodolei, "Водолей");
+                        ui.selectable_value(&mut self.selected_mode, Modes::Robot, "Робот");
+                        ui.selectable_value(&mut self.selected_mode, Modes::Cherepaha, "Черепаха");
+                        ui.selectable_value(
+                            &mut self.selected_mode,
+                            Modes::Chertezhnik,
+                            "Чертежник",
+                        );
+                    });
+            })
+        });
     }
 }
