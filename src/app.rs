@@ -1,4 +1,5 @@
 use crate::egui_tools::EguiRenderer;
+use crate::gruvbox_egui::gruvbox_dark_theme;
 use egui_wgpu::wgpu::SurfaceError;
 use egui_wgpu::{ScreenDescriptor, wgpu};
 use log::info;
@@ -72,6 +73,7 @@ impl AppState {
         surface.configure(&device, &surface_config);
 
         let egui_renderer = EguiRenderer::new(&device, surface_config.format, None, 1, window);
+        egui_renderer.context().set_style(gruvbox_dark_theme());
 
         let scale_factor = 1.0;
 
@@ -190,31 +192,6 @@ impl App {
             egui::SidePanel::left("IDE").show(state.egui_renderer.context(), |ui| {
                 ui.label("Самое современное IDE")
             });
-            egui::Window::new("winit + egui + wgpu says hello!")
-                .resizable(true)
-                .vscroll(true)
-                .default_open(false)
-                .show(state.egui_renderer.context(), |ui| {
-                    ui.label("Label!");
-
-                    if ui.button("Button!").clicked() {
-                        info!("boom!")
-                    }
-
-                    ui.separator();
-                    ui.horizontal(|ui| {
-                        ui.label(format!(
-                            "Pixels per point: {}",
-                            state.egui_renderer.context().pixels_per_point()
-                        ));
-                        if ui.button("-").clicked() {
-                            state.scale_factor = (state.scale_factor - 0.1).max(0.3);
-                        }
-                        if ui.button("+").clicked() {
-                            state.scale_factor = (state.scale_factor + 0.1).min(3.0);
-                        }
-                    });
-                });
 
             state.egui_renderer.end_frame_and_draw(
                 &state.device,

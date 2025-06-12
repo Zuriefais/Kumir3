@@ -1,5 +1,6 @@
 mod app;
 mod egui_tools;
+mod gruvbox_egui;
 
 use winit::event_loop::{ControlFlow, EventLoop};
 
