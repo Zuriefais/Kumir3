@@ -1,6 +1,5 @@
 use egui::Context;
 use egui_extras::syntax_highlighting::{CodeTheme, highlight};
-use log::info;
 
 pub struct KumirGui {
     egui_context: Context,
