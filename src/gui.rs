@@ -127,5 +127,13 @@ impl KumirGui {
                     });
             })
         });
+
+        egui::TopBottomPanel::bottom("terminal")
+            .resizable(true)
+            // .default_height(200.0)
+            // .max_height(f32::INFINITY)
+            .show(&self.egui_context, |ui| {
+                ui.label("Тут может быть вывод программы");
+            });
     }
 }
