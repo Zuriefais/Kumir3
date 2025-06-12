@@ -12,7 +12,7 @@ impl KumirGui {
         let mut gui = Self {
             egui_context: context.clone(),
             code: "fn main() {\n    println!(\"Hello, world!\");\n}".to_string(),
-            lang: "rust".to_string(),
+            lang: "Rust".to_string(),
         };
         gui
     }
