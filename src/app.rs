@@ -31,6 +31,26 @@ pub struct AppState {
     pub texture_blitter: wgpu::util::TextureBlitter,
 }
 
+fn create_vello_texture(device: &wgpu::Device, width: u32, height: u32) -> Texture {
+    device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("Vello Texture"),
+        size: wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+            | wgpu::TextureUsages::COPY_SRC
+            | wgpu::TextureUsages::STORAGE_BINDING
+            | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    })
+}
+
 impl AppState {
     async fn new(
         instance: &wgpu::Instance,
@@ -92,23 +112,7 @@ impl AppState {
 
         let kumir_gui = KumirGui::new(egui_renderer.context());
 
-        let vello_texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("Vello Texture"),
-            size: wgpu::Extent3d {
-                width,
-                height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8Unorm,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-                | wgpu::TextureUsages::COPY_SRC
-                | wgpu::TextureUsages::STORAGE_BINDING
-                | wgpu::TextureUsages::TEXTURE_BINDING,
-            view_formats: &[],
-        });
+        let vello_texture = create_vello_texture(&device, width, height);
         let vello_renderer = Renderer::new(
             &device,
             RendererOptions {
@@ -140,6 +144,7 @@ impl AppState {
         self.surface_config.width = width;
         self.surface_config.height = height;
         self.surface.configure(&self.device, &self.surface_config);
+        self.vello_texture = create_vello_texture(&self.device, width, height);
     }
 
     fn handle_redraw(&mut self, window: &Window) {
