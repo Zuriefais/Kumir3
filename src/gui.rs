@@ -2,6 +2,7 @@ use std::fmt;
 
 use egui::Context;
 use egui_extras::syntax_highlighting::{CodeTheme, highlight};
+use log::info;
 
 pub struct KumirGui {
     egui_context: Context,
@@ -100,15 +101,18 @@ impl KumirGui {
 
         egui::TopBottomPanel::top("tools").show(&self.egui_context, |ui| {
             ui.horizontal(|ui| {
-                if ui.add(egui::Button::new("Запусить").frame(false)).clicked() {
-                    println!("Something should run");
+                if ui
+                    .add(egui::Button::new("Запустить").frame(false))
+                    .clicked()
+                {
+                    info!("Something should run");
                 }
 
                 if ui
                     .add(egui::Button::new("Остановить").frame(false))
                     .clicked()
                 {
-                    println!("Something should stop");
+                    info!("Something should stop");
                 }
 
                 egui::ComboBox::from_id_salt("mode")

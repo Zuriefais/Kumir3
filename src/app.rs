@@ -97,6 +97,56 @@ impl AppState {
         self.surface_config.height = height;
         self.surface.configure(&self.device, &self.surface_config);
     }
+
+    fn handle_redraw(&mut self, window: &Window) {
+        let screen_descriptor = ScreenDescriptor {
+            size_in_pixels: [self.surface_config.width, self.surface_config.height],
+            pixels_per_point: window.scale_factor() as f32 * self.scale_factor,
+        };
+
+        let surface_texture = self.surface.get_current_texture();
+
+        match surface_texture {
+            Err(SurfaceError::Outdated) => {
+                // Ignoring outdated to allow resizing and minimization
+                info!("wgpu surface outdated");
+                return;
+            }
+            Err(_) => {
+                surface_texture.expect("Failed to acquire next swap chain texture");
+                return;
+            }
+            Ok(_) => {}
+        };
+
+        let surface_texture = surface_texture.unwrap();
+
+        let surface_view = surface_texture
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+
+        {
+            self.egui_renderer.begin_frame(window);
+            self.kumir_gui.render_gui();
+            self.egui_renderer.end_frame_and_draw(
+                &self.device,
+                &self.queue,
+                &mut encoder,
+                window,
+                &surface_view,
+                screen_descriptor,
+            );
+        }
+
+        self.queue.submit(Some(encoder.finish()));
+        surface_texture.present();
+    }
+
+    fn resumed(&mut self) {}
 }
 
 pub struct App {
@@ -155,58 +205,10 @@ impl App {
                     return;
                 }
             }
-        }
-
-        let state = self.state.as_mut().unwrap();
-
-        let screen_descriptor = ScreenDescriptor {
-            size_in_pixels: [state.surface_config.width, state.surface_config.height],
-            pixels_per_point: self.window.as_ref().unwrap().scale_factor() as f32
-                * state.scale_factor,
-        };
-
-        let surface_texture = state.surface.get_current_texture();
-
-        match surface_texture {
-            Err(SurfaceError::Outdated) => {
-                // Ignoring outdated to allow resizing and minimization
-                info!("wgpu surface outdated");
-                return;
+            if let Some(state) = &mut self.state {
+                state.handle_redraw(window);
             }
-            Err(_) => {
-                surface_texture.expect("Failed to acquire next swap chain texture");
-                return;
-            }
-            Ok(_) => {}
-        };
-
-        let surface_texture = surface_texture.unwrap();
-
-        let surface_view = surface_texture
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
-
-        let mut encoder = state
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-
-        let window = self.window.as_ref().unwrap();
-
-        {
-            state.egui_renderer.begin_frame(window);
-            state.kumir_gui.render_gui();
-            state.egui_renderer.end_frame_and_draw(
-                &state.device,
-                &state.queue,
-                &mut encoder,
-                window,
-                &surface_view,
-                screen_descriptor,
-            );
         }
-
-        state.queue.submit(Some(encoder.finish()));
-        surface_texture.present();
     }
 }
 
