@@ -29,6 +29,12 @@ enum Modes {
     Robot,
 }
 
+struct Pane {
+    nr: usize,
+}
+
+struct TreeBehavior {}
+
 impl fmt::Display for Modes {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
