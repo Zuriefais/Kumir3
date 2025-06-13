@@ -5,6 +5,11 @@ use egui_wgpu::wgpu::SurfaceError;
 use egui_wgpu::{ScreenDescriptor, wgpu};
 use log::info;
 use std::sync::Arc;
+use vello::peniko::Color;
+use vello::peniko::color::palette;
+use vello::util::RenderContext;
+use vello::{AaConfig, Renderer, RendererOptions, Scene};
+use wgpu::Texture;
 use winit::application::ApplicationHandler;
 use winit::dpi::PhysicalSize;
 use winit::event::WindowEvent;
@@ -19,6 +24,11 @@ pub struct AppState {
     pub scale_factor: f32,
     pub egui_renderer: EguiRenderer,
     pub kumir_gui: KumirGui,
+    pub vello_renderer: Renderer,
+    pub vello_scene: Scene,
+    pub vello_context: RenderContext,
+    pub vello_texture: Texture,
+    pub texture_blitter: wgpu::util::TextureBlitter,
 }
 
 impl AppState {
@@ -60,6 +70,7 @@ impl AppState {
             .iter()
             .find(|d| **d == selected_format)
             .expect("failed to select proper surface texture format!");
+        info!("Supported formats: {:?}", swapchain_capabilities.formats);
 
         let surface_config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
@@ -81,6 +92,34 @@ impl AppState {
 
         let kumir_gui = KumirGui::new(egui_renderer.context());
 
+        let vello_texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Vello Texture"),
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                | wgpu::TextureUsages::COPY_SRC
+                | wgpu::TextureUsages::STORAGE_BINDING
+                | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+        let vello_renderer = Renderer::new(
+            &device,
+            RendererOptions {
+                ..Default::default()
+            },
+        )
+        .expect("Couldn't create renderer");
+        let vello_scene = Scene::new();
+        let vello_context = RenderContext::new();
+        let texture_blitter = wgpu::util::TextureBlitter::new(&device, *swapchain_format);
+
         Self {
             device,
             queue,
@@ -89,6 +128,11 @@ impl AppState {
             egui_renderer,
             scale_factor,
             kumir_gui,
+            vello_renderer,
+            vello_scene,
+            vello_context,
+            vello_texture,
+            texture_blitter,
         }
     }
 
@@ -99,8 +143,15 @@ impl AppState {
     }
 
     fn handle_redraw(&mut self, window: &Window) {
+        self.vello_scene.reset();
+
+        // Re-add the objects to draw to the scene.
+        add_shapes_to_scene(&mut self.vello_scene);
+
+        let width = self.surface_config.width;
+        let height = self.surface_config.height;
         let screen_descriptor = ScreenDescriptor {
-            size_in_pixels: [self.surface_config.width, self.surface_config.height],
+            size_in_pixels: [width, height],
             pixels_per_point: window.scale_factor() as f32 * self.scale_factor,
         };
 
@@ -124,12 +175,31 @@ impl AppState {
         let surface_view = surface_texture
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
+        let vello_view = self
+            .vello_texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
 
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
         {
+            self.vello_renderer
+                .render_to_texture(
+                    &self.device,
+                    &self.queue,
+                    &self.vello_scene,
+                    &vello_view,
+                    &vello::RenderParams {
+                        base_color: palette::css::BLACK, // Background color
+                        width,
+                        height,
+                        antialiasing_method: AaConfig::Msaa16,
+                    },
+                )
+                .expect("failed to render to surface");
+            self.texture_blitter
+                .copy(&self.device, &mut encoder, &vello_view, &surface_view);
             self.egui_renderer.begin_frame(window);
             self.kumir_gui.render_gui();
             self.egui_renderer.end_frame_and_draw(
@@ -244,4 +314,41 @@ impl ApplicationHandler for App {
             _ => (),
         }
     }
+}
+
+use vello::kurbo::{Affine, Circle, Ellipse, Line, RoundedRect, Stroke};
+
+fn add_shapes_to_scene(scene: &mut Scene) {
+    // Draw an outlined rectangle
+    let stroke = Stroke::new(6.0);
+    let rect = RoundedRect::new(10.0, 10.0, 240.0, 240.0, 20.0);
+    let rect_stroke_color = Color::new([0.9804, 0.702, 0.5294, 1.]);
+    scene.stroke(&stroke, Affine::IDENTITY, rect_stroke_color, None, &rect);
+
+    // Draw a filled circle
+    let circle = Circle::new((420.0, 200.0), 120.0);
+    let circle_fill_color = Color::new([0.9529, 0.5451, 0.6588, 1.]);
+    scene.fill(
+        vello::peniko::Fill::NonZero,
+        Affine::IDENTITY,
+        circle_fill_color,
+        None,
+        &circle,
+    );
+
+    // Draw a filled ellipse
+    let ellipse = Ellipse::new((250.0, 420.0), (100.0, 160.0), -90.0);
+    let ellipse_fill_color = Color::new([0.7961, 0.651, 0.9686, 1.]);
+    scene.fill(
+        vello::peniko::Fill::NonZero,
+        Affine::IDENTITY,
+        ellipse_fill_color,
+        None,
+        &ellipse,
+    );
+
+    // Draw a straight line
+    let line = Line::new((260.0, 20.0), (620.0, 100.0));
+    let line_stroke_color = Color::new([0.5373, 0.7059, 0.9804, 1.]);
+    scene.stroke(&stroke, Affine::IDENTITY, line_stroke_color, None, &line);
 }
