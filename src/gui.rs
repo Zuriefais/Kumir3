@@ -1,14 +1,22 @@
-use std::fmt;
+use std::{fmt, sync::Arc, sync::RwLock};
 
 use egui::{Context, TextureHandle, TextureId, epaint::image, load::SizedTexture};
 use egui_extras::syntax_highlighting::{CodeTheme, highlight};
 use log::info;
+
+#[derive(Default)]
+pub struct VelloWindowSize {
+    pub height: u32,
+    pub width: u32,
+    pub changed: bool,
+}
 
 pub struct KumirGui {
     egui_context: Context,
     code: String,
     lang: String,
     selected_mode: Modes,
+    vello_window_size: Arc<RwLock<VelloWindowSize>>,
 }
 
 #[derive(PartialEq, Eq, Clone)]
@@ -35,22 +43,31 @@ impl fmt::Display for Modes {
 }
 
 impl KumirGui {
-    pub fn new(context: &Context) -> Self {
-        let mut gui = Self {
+    pub fn new(context: &Context, vello_window_size: Arc<RwLock<VelloWindowSize>>) -> Self {
+        let gui = Self {
             egui_context: context.clone(),
             code: "fn main() {\n    println!(\"Hello, world!\");\n}".to_string(),
             lang: "Rust".to_string(),
             selected_mode: Modes::None,
+            vello_window_size,
         };
         gui
     }
 
     pub fn render_gui(&mut self, vello_texture: TextureId) {
         egui::Window::new("Vello").show(&self.egui_context, |ui| {
-            let available_size = ui.available_size(); // Размеры доступной области
+            let available_size = ui.available_size();
+            if let Ok(mut size) = self.vello_window_size.write() {
+                if size.width != available_size.x as u32 || size.height != available_size.y as u32 {
+                    size.width = available_size.x as u32;
+                    size.height = available_size.y as u32;
+                    size.changed = true;
+                }
+            }
+
             ui.image(SizedTexture {
                 id: vello_texture,
-                size: egui::Vec2::new(available_size.x, available_size.y), // Use appropriate size
+                size: egui::Vec2::new(available_size.x, available_size.y),
             });
         });
         egui::SidePanel::left("IDE")

@@ -1,11 +1,11 @@
 use crate::egui_tools::EguiRenderer;
 use crate::executors::add_shapes_to_scene;
 use crate::gruvbox_egui::gruvbox_dark_theme;
-use crate::gui::KumirGui;
+use crate::gui::{KumirGui, VelloWindowSize};
 use egui_wgpu::wgpu::SurfaceError;
 use egui_wgpu::{ScreenDescriptor, wgpu};
 use log::info;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use vello::peniko::Color;
 use vello::peniko::color::palette;
 use vello::util::RenderContext;
@@ -31,6 +31,7 @@ pub struct AppState {
     pub vello_context: RenderContext,
     pub vello_texture: Texture,
     pub texture_blitter: wgpu::util::TextureBlitter,
+    vello_window_size: Arc<RwLock<VelloWindowSize>>,
 }
 
 fn create_vello_texture(device: &wgpu::Device, width: u32, height: u32) -> Texture {
@@ -111,10 +112,10 @@ impl AppState {
         egui_renderer.context().set_style(gruvbox_dark_theme());
 
         let scale_factor = 1.0;
+        let vello_window_size: Arc<RwLock<VelloWindowSize>> = Default::default();
+        let kumir_gui = KumirGui::new(egui_renderer.context(), vello_window_size.clone());
 
-        let kumir_gui = KumirGui::new(egui_renderer.context());
-
-        let vello_texture = create_vello_texture(&device, width, height);
+        let vello_texture = create_vello_texture(&device, 100, 100);
         let vello_renderer = Renderer::new(
             &device,
             RendererOptions {
@@ -139,6 +140,7 @@ impl AppState {
             vello_context,
             vello_texture,
             texture_blitter,
+            vello_window_size,
         }
     }
 
@@ -146,12 +148,19 @@ impl AppState {
         self.surface_config.width = width;
         self.surface_config.height = height;
         self.surface.configure(&self.device, &self.surface_config);
-        self.vello_texture = create_vello_texture(&self.device, width, height);
     }
 
     fn handle_redraw(&mut self, window: &Window) {
         let width = self.surface_config.width;
         let height = self.surface_config.height;
+
+        if let Ok(mut vello_size) = self.vello_window_size.write() {
+            if vello_size.changed && vello_size.height != 0 && vello_size.height != 0 {
+                vello_size.changed = false;
+                self.vello_texture =
+                    create_vello_texture(&self.device, vello_size.width, vello_size.height);
+            }
+        }
         self.vello_scene.reset();
 
         // Re-add the objects to draw to the scene.
