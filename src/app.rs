@@ -148,13 +148,13 @@ impl AppState {
     }
 
     fn handle_redraw(&mut self, window: &Window) {
+        let width = self.surface_config.width;
+        let height = self.surface_config.height;
         self.vello_scene.reset();
 
         // Re-add the objects to draw to the scene.
-        add_shapes_to_scene(&mut self.vello_scene);
+        add_shapes_to_scene(&mut self.vello_scene, width, height);
 
-        let width = self.surface_config.width;
-        let height = self.surface_config.height;
         let screen_descriptor = ScreenDescriptor {
             size_in_pixels: [width, height],
             pixels_per_point: window.scale_factor() as f32 * self.scale_factor,
@@ -323,15 +323,16 @@ impl ApplicationHandler for App {
 
 use vello::kurbo::{Affine, Circle, Ellipse, Line, RoundedRect, Stroke};
 
-fn add_shapes_to_scene(scene: &mut Scene) {
+fn add_shapes_to_scene(scene: &mut Scene, width: u32, height: u32) {
     // Draw an outlined rectangle
     let stroke = Stroke::new(6.0);
     let rect = RoundedRect::new(10.0, 10.0, 240.0, 240.0, 20.0);
     let rect_stroke_color = Color::new([0.9804, 0.702, 0.5294, 1.]);
     scene.stroke(&stroke, Affine::IDENTITY, rect_stroke_color, None, &rect);
 
-    // Draw a filled circle
-    let circle = Circle::new((420.0, 200.0), 120.0);
+    let center_x = width as f32 / 2.0;
+    let center_y = height as f32 / 2.0;
+    let circle = Circle::new((center_x, center_y), 120.0);
     let circle_fill_color = Color::new([0.9529, 0.5451, 0.6588, 1.]);
     scene.fill(
         vello::peniko::Fill::NonZero,
