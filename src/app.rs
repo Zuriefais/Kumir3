@@ -9,6 +9,7 @@ use std::sync::Arc;
 use vello::peniko::Color;
 use vello::peniko::color::palette;
 use vello::util::RenderContext;
+use vello::wgpu::TextureFormat;
 use vello::{AaConfig, Renderer, RendererOptions, Scene};
 use wgpu::Texture;
 use winit::application::ApplicationHandler;
@@ -183,7 +184,16 @@ impl AppState {
             .create_view(&wgpu::TextureViewDescriptor::default());
         let vello_view = self
             .vello_texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+            .create_view(&wgpu::TextureViewDescriptor {
+                format: Some(TextureFormat::Rgba8Unorm),
+                usage: Some(
+                    wgpu::TextureUsages::STORAGE_BINDING | wgpu::TextureUsages::TEXTURE_BINDING,
+                ),
+                ..Default::default()
+            });
+        let vello_texture_egui = self
+            .egui_renderer
+            .register_native_texture(&self.device, &vello_view);
 
         let mut encoder = self
             .device
@@ -204,10 +214,10 @@ impl AppState {
                     },
                 )
                 .expect("failed to render to surface");
-            self.texture_blitter
-                .copy(&self.device, &mut encoder, &vello_view, &surface_view);
+            // self.texture_blitter
+            //     .copy(&self.device, &mut encoder, &vello_view, &surface_view);
             self.egui_renderer.begin_frame(window);
-            self.kumir_gui.render_gui();
+            self.kumir_gui.render_gui(vello_texture_egui);
             self.egui_renderer.end_frame_and_draw(
                 &self.device,
                 &self.queue,

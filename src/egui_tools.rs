@@ -115,4 +115,13 @@ impl EguiRenderer {
 
         self.frame_started = false;
     }
+
+    pub fn register_native_texture(
+        &mut self,
+        device: &Device,
+        texture: &TextureView,
+    ) -> egui::TextureId {
+        self.renderer
+            .register_native_texture(device, texture, Default::default())
+    }
 }

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use egui::Context;
+use egui::{Context, TextureHandle, TextureId, epaint::image, load::SizedTexture};
 use egui_extras::syntax_highlighting::{CodeTheme, highlight};
 use log::info;
 
@@ -45,7 +45,14 @@ impl KumirGui {
         gui
     }
 
-    pub fn render_gui(&mut self) {
+    pub fn render_gui(&mut self, vello_texture: TextureId) {
+        egui::Window::new("Vello").show(&self.egui_context, |ui| {
+            let available_size = ui.available_size(); // Размеры доступной области
+            ui.image(SizedTexture {
+                id: vello_texture,
+                size: egui::Vec2::new(available_size.x, available_size.y), // Use appropriate size
+            });
+        });
         egui::SidePanel::left("IDE")
             .max_width(f32::INFINITY)
             .show(&self.egui_context, |ui| {
