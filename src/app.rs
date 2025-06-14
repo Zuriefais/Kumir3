@@ -1,11 +1,11 @@
 use crate::egui_tools::EguiRenderer;
 use crate::executors::add_shapes_to_scene;
 use crate::gruvbox_egui::gruvbox_dark_theme;
-use crate::gui::{KumirGui, VelloWindowSize};
+use crate::gui::{KumirGui, VelloWindowOptions};
 use egui_wgpu::wgpu::SurfaceError;
 use egui_wgpu::{ScreenDescriptor, wgpu};
 use log::info;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use vello::peniko::Color;
 use vello::peniko::color::palette;
 use vello::util::RenderContext;
@@ -31,7 +31,7 @@ pub struct AppState {
     pub vello_context: RenderContext,
     pub vello_texture: Texture,
     pub texture_blitter: wgpu::util::TextureBlitter,
-    vello_window_size: Arc<RwLock<VelloWindowSize>>,
+    vello_window_options: Arc<Mutex<VelloWindowOptions>>,
 }
 
 fn create_vello_texture(device: &wgpu::Device, width: u32, height: u32) -> Texture {
@@ -112,8 +112,8 @@ impl AppState {
         egui_renderer.context().set_style(gruvbox_dark_theme());
 
         let scale_factor = 1.0;
-        let vello_window_size: Arc<RwLock<VelloWindowSize>> = Default::default();
-        let kumir_gui = KumirGui::new(egui_renderer.context(), vello_window_size.clone());
+        let vello_window_options: Arc<Mutex<VelloWindowOptions>> = Default::default();
+        let kumir_gui = KumirGui::new(egui_renderer.context(), vello_window_options.clone());
 
         let vello_texture = create_vello_texture(&device, 100, 100);
         let vello_renderer = Renderer::new(
@@ -140,7 +140,7 @@ impl AppState {
             vello_context,
             vello_texture,
             texture_blitter,
-            vello_window_size,
+            vello_window_options,
         }
     }
 
@@ -153,9 +153,10 @@ impl AppState {
     fn handle_redraw(&mut self, window: &Window) {
         let width = self.surface_config.width;
         let height = self.surface_config.height;
-
-        if let Ok(mut vello_size) = self.vello_window_size.write() {
+        let mut vello_window_changed = false;
+        if let Ok(mut vello_size) = self.vello_window_options.lock() {
             if vello_size.changed && vello_size.height != 0 && vello_size.height != 0 {
+                vello_window_changed = true;
                 vello_size.changed = false;
                 self.vello_texture =
                     create_vello_texture(&self.device, vello_size.width, vello_size.height);
@@ -200,9 +201,13 @@ impl AppState {
                 ),
                 ..Default::default()
             });
-        let vello_texture_egui = self
-            .egui_renderer
-            .register_native_texture(&self.device, &vello_view);
+        if vello_window_changed {
+            if let Ok(mut vello_options) = self.vello_window_options.lock() {
+                vello_options.texture = self
+                    .egui_renderer
+                    .register_native_texture(&self.device, &vello_view);
+            }
+        }
 
         let mut encoder = self
             .device
@@ -226,7 +231,7 @@ impl AppState {
             // self.texture_blitter
             //     .copy(&self.device, &mut encoder, &vello_view, &surface_view);
             self.egui_renderer.begin_frame(window);
-            self.kumir_gui.render_gui(vello_texture_egui);
+            self.kumir_gui.render_gui();
             self.egui_renderer.end_frame_and_draw(
                 &self.device,
                 &self.queue,
