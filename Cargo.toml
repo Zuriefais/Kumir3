@@ -1,24 +1,6 @@
-[package]
-name = "kumir3"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+resolver = "3"
+members = ["crates/*"]
 
-[dependencies]
-egui = { version = "0.31.1" }
-egui_extras = { version = "0.31.1", features = ["syntect"] }
-egui-wgpu = { version = "0.31.1", features = ["winit"] }
-egui-winit = "0.31.1"
-egui_tiles = "0.12.0"
-
-winit = "0.30.9"
-pollster = "0.4.0"
-wasmtime = "33.0.0"
+[workspace.dependencies]
 log = "0.4.27"
-env_logger = "0.11.8"
-vello = "0.5.0"
-
-
-[profile.dev]
-opt-level = 0
-[profile.dev.package."*"]
-opt-level = 3
