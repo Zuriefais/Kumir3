@@ -1,12 +1,36 @@
 #[derive(Debug, PartialEq)]
 pub enum Token {
-    Keyword(String),
+    Keyword(Keyword),
     Identifier(String),
-    Number(i32),
+    Int(i32),
+    Float(f32),
     Operator(String),
     Delimiter(char),
     String(String),
     Eof,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Keyword {
+    Alg,
+    Start,
+    Stop,
+    Int,
+    Float,
+}
+impl From<&str> for Keyword {
+    fn from(value: &str) -> Self {
+        match value {
+            "алг" => Keyword::Alg,
+            "нач" => Keyword::Start,
+            "кон" => Keyword::Stop,
+            "цел" => Keyword::Int,
+            "вещ" => Keyword::Float,
+            _ => {
+                panic!("Error")
+            }
+        }
+    }
 }
 
 pub struct Lexer {
@@ -65,12 +89,15 @@ impl Lexer {
                 } else if c.is_alphabetic() || c == '_' {
                     let word = self.collect_word();
                     if ["алг", "нач", "кон", "цел", "вещ"].contains(&word.as_str()) {
-                        Ok(Token::Keyword(word))
+                        Ok(Token::Keyword(Keyword::from(word.as_str())))
                     } else {
                         Ok(Token::Identifier(word))
                     }
                 } else if c.is_digit(10) {
-                    Ok(Token::Number(self.collect_number()))
+                    Ok(match self.collect_number() {
+                        Number::Float(f) => Token::Float(f),
+                        Number::Int(i) => Token::Int(i),
+                    })
                 } else if "+-*/=><".contains(c) {
                     let op = c.to_string();
                     self.advance();
@@ -121,12 +148,28 @@ impl Lexer {
         word
     }
 
-    pub fn collect_number(&mut self) -> i32 {
+    pub fn collect_number(&mut self) -> Number {
         let mut num = String::new();
-        while self.current_char.map_or(false, |c| c.is_digit(10)) {
+        let mut is_float = false;
+        while self
+            .current_char
+            .map_or(false, |c| c.is_digit(10) || c == '.')
+        {
+            if self.current_char.unwrap() == '.' {
+                is_float = true
+            }
             num.push(self.current_char.unwrap());
             self.advance();
         }
-        num.parse().unwrap_or(0)
+        if is_float {
+            Number::Float(num.parse().unwrap_or(0.0))
+        } else {
+            Number::Int(num.parse().unwrap_or(0))
+        }
     }
+}
+
+enum Number {
+    Float(f32),
+    Int(i32),
 }
