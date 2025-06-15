@@ -16,19 +16,25 @@ pub enum Keyword {
     Alg,
     Start,
     Stop,
+    TypeDef(TypeDefinition),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum TypeDefinition {
     Int,
     Bool,
     Float,
 }
+
 impl From<&str> for Keyword {
     fn from(value: &str) -> Self {
         match value {
             "алг" => Keyword::Alg,
             "нач" => Keyword::Start,
             "кон" => Keyword::Stop,
-            "цел" => Keyword::Int,
-            "вещ" => Keyword::Float,
-            "лог" => Keyword::Bool,
+            "цел" => Keyword::TypeDef(TypeDefinition::Int),
+            "вещ" => Keyword::TypeDef(TypeDefinition::Float),
+            "лог" => Keyword::TypeDef(TypeDefinition::Bool),
             _ => {
                 panic!("Error")
             }
@@ -179,7 +185,7 @@ impl Lexer {
     }
 }
 
-enum Number {
+pub enum Number {
     Float(f32),
     Int(i32),
 }
