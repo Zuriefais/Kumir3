@@ -1,0 +1,10 @@
+dictionaries = [
+    "en_us",
+    "ru",
+]
+words = [
+    "gruvbox",
+    "kum",
+    "алг",
+    "вещ",
+]

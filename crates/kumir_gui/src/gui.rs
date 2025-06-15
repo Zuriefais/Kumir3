@@ -1,11 +1,11 @@
 use std::{
-    fmt::{self, format},
-    sync::{Arc, Mutex, RwLock},
+    fmt,
+    sync::{Arc, Mutex},
 };
 
-use egui::{Context, TextureHandle, TextureId, epaint::image, load::SizedTexture};
-use egui_extras::syntax_highlighting::{CodeTheme, highlight};
-use egui_tiles::SimplificationOptions;
+use egui::{Context, TextureId, load::SizedTexture};
+use egui_extras::syntax_highlighting::highlight;
+
 use log::info;
 
 #[derive(Default)]
@@ -25,7 +25,6 @@ pub struct KumirGui {
     egui_context: Context,
 
     selected_mode: Modes,
-    vello_window_options: Arc<Mutex<VelloWindowOptions>>,
     tree: egui_tiles::Tree<Pane>,
 }
 
@@ -60,7 +59,6 @@ impl KumirGui {
             selected_mode: Modes::None,
 
             tree: create_tree(vello_options.clone()),
-            vello_window_options: vello_options,
         };
         gui
     }

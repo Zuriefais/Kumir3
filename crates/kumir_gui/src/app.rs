@@ -5,10 +5,8 @@ use crate::gui::{KumirGui, VelloWindowOptions};
 use egui_wgpu::wgpu::SurfaceError;
 use egui_wgpu::{ScreenDescriptor, wgpu};
 use log::info;
-use std::sync::{Arc, Mutex, RwLock};
-use vello::peniko::Color;
+use std::sync::{Arc, Mutex};
 use vello::peniko::color::palette;
-use vello::util::RenderContext;
 use vello::wgpu::TextureFormat;
 use vello::{AaConfig, Renderer, RendererOptions, Scene};
 use wgpu::Texture;
@@ -28,9 +26,7 @@ pub struct AppState {
     pub kumir_gui: KumirGui,
     pub vello_renderer: Renderer,
     pub vello_scene: Scene,
-    pub vello_context: RenderContext,
     pub vello_texture: Texture,
-    pub texture_blitter: wgpu::util::TextureBlitter,
     vello_window_options: Arc<Mutex<VelloWindowOptions>>,
 }
 
@@ -124,8 +120,6 @@ impl AppState {
         )
         .expect("Couldn't create renderer");
         let vello_scene = Scene::new();
-        let vello_context = RenderContext::new();
-        let texture_blitter = wgpu::util::TextureBlitter::new(&device, *swapchain_format);
 
         Self {
             device,
@@ -137,9 +131,8 @@ impl AppState {
             kumir_gui,
             vello_renderer,
             vello_scene,
-            vello_context,
+
             vello_texture,
-            texture_blitter,
             vello_window_options,
         }
     }
@@ -228,8 +221,7 @@ impl AppState {
                     },
                 )
                 .expect("failed to render to surface");
-            // self.texture_blitter
-            //     .copy(&self.device, &mut encoder, &vello_view, &surface_view);
+
             self.egui_renderer.begin_frame(window);
             self.kumir_gui.render_gui();
             self.egui_renderer.end_frame_and_draw(
@@ -245,8 +237,6 @@ impl AppState {
         self.queue.submit(Some(encoder.finish()));
         surface_texture.present();
     }
-
-    fn resumed(&mut self) {}
 }
 
 pub struct App {

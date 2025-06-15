@@ -7,6 +7,7 @@ pub enum Token {
     Operator(String),
     Delimiter(char),
     String(String),
+    Char(char),
     Bool(bool),
     Eof,
 }
@@ -24,6 +25,8 @@ pub enum TypeDefinition {
     Int,
     Bool,
     Float,
+    String,
+    Char,
 }
 
 impl From<&str> for Keyword {
@@ -35,6 +38,8 @@ impl From<&str> for Keyword {
             "цел" => Keyword::TypeDef(TypeDefinition::Int),
             "вещ" => Keyword::TypeDef(TypeDefinition::Float),
             "лог" => Keyword::TypeDef(TypeDefinition::Bool),
+            "сим" => Keyword::TypeDef(TypeDefinition::Char),
+            "лит" => Keyword::TypeDef(TypeDefinition::String),
             _ => {
                 panic!("Error")
             }
@@ -97,7 +102,8 @@ impl Lexer {
                     self.next_token()
                 } else if c.is_alphabetic() || c == '_' {
                     let word = self.collect_word();
-                    if ["алг", "нач", "кон", "цел", "вещ", "лог"].contains(&word.as_str())
+                    if ["алг", "нач", "кон", "цел", "вещ", "лог", "сим", "лит"]
+                        .contains(&word.as_str())
                     {
                         Ok(Token::Keyword(Keyword::from(word.as_str())))
                     } else if ["да", "нет"].contains(&word.as_str()) {
@@ -133,10 +139,25 @@ impl Lexer {
                 } else if '"' == c {
                     self.advance();
                     Ok(Token::String(self.collect_string()))
+                } else if '\'' == c {
+                    self.advance();
+                    let char_token = self.collect_char();
+                    self.advance();
+                    char_token
                 } else {
                     Err(format!("Неизвестный символ: {}", c))
                 }
             }
+        }
+    }
+
+    pub fn collect_char(&mut self) -> Result<Token, String> {
+        let char = self.current_char.unwrap();
+        self.advance();
+        if self.current_char.unwrap() == '\'' {
+            Ok(Token::Char(char))
+        } else {
+            Err("символ не может быть длиннее 1".to_string())
         }
     }
 
