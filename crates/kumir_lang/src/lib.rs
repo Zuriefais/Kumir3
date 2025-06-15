@@ -7,6 +7,7 @@ pub enum Token {
     Operator(String),
     Delimiter(char),
     String(String),
+    Bool(bool),
     Eof,
 }
 
@@ -16,6 +17,7 @@ pub enum Keyword {
     Start,
     Stop,
     Int,
+    Bool,
     Float,
 }
 impl From<&str> for Keyword {
@@ -26,6 +28,7 @@ impl From<&str> for Keyword {
             "кон" => Keyword::Stop,
             "цел" => Keyword::Int,
             "вещ" => Keyword::Float,
+            "лог" => Keyword::Bool,
             _ => {
                 panic!("Error")
             }
@@ -88,8 +91,15 @@ impl Lexer {
                     self.next_token()
                 } else if c.is_alphabetic() || c == '_' {
                     let word = self.collect_word();
-                    if ["алг", "нач", "кон", "цел", "вещ"].contains(&word.as_str()) {
+                    if ["алг", "нач", "кон", "цел", "вещ", "лог"].contains(&word.as_str())
+                    {
                         Ok(Token::Keyword(Keyword::from(word.as_str())))
+                    } else if ["да", "нет"].contains(&word.as_str()) {
+                        match word.as_str() {
+                            "да" => Ok(Token::Bool(true)),
+                            "нет" => Ok(Token::Bool(false)),
+                            _ => Err("Ошибка".to_string()),
+                        }
                     } else {
                         Ok(Token::Identifier(word))
                     }
