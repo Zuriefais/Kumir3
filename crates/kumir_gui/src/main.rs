@@ -4,6 +4,7 @@ mod executors;
 mod gruvbox_egui;
 mod gui;
 
+use tracy_client::Client;
 use winit::event_loop::{ControlFlow, EventLoop};
 
 fn main() {
@@ -15,6 +16,7 @@ fn main() {
 
 async fn run() {
     env_logger::init();
+    Client::start();
     let event_loop = EventLoop::new().unwrap();
 
     event_loop.set_control_flow(ControlFlow::Poll);
