@@ -163,13 +163,11 @@ impl Lexer {
 
     pub fn collect_string(&mut self) -> String {
         let mut str = String::new();
-        while self
-            .current_char
-            .map_or(false, |c| c.is_alphanumeric() && c != '"')
-        {
+        while self.current_char.map_or(false, |c| c != '"') {
             str.push(self.current_char.unwrap());
             self.advance();
         }
+        self.advance();
         str
     }
 
