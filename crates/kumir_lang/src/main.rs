@@ -1,4 +1,8 @@
-use kumir_lang::lexer::{Lexer, Token};
+use kumir_lang::{
+    ast::Parser,
+    lexer::{Lexer, Token},
+};
+use log::info;
 
 fn main() {
     env_logger::init();
@@ -15,4 +19,7 @@ fn main() {
             Err(e) => println!("Ошибка: {}", e),
         }
     }
+    let mut parser = Parser::new(tokens);
+    let ast = parser.parse();
+    info!("AST generated: {:?}", ast)
 }

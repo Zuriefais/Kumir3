@@ -14,6 +14,15 @@ pub enum Token {
     Eof,
 }
 
+impl Token {
+    pub fn as_operator(&self) -> Option<Operator> {
+        match self {
+            Token::Operator(op) => Some(*op),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Operator {
     /// Addition (+)
@@ -40,6 +49,21 @@ pub enum Operator {
     Colon,
     /// Assignment (:=)
     Assignment,
+}
+
+impl Operator {
+    pub fn precedence(&self) -> i32 {
+        match self {
+            Operator::Multiply | Operator::Divide => 3,
+            Operator::Plus | Operator::Minus => 2,
+            Operator::Greater
+            | Operator::Less
+            | Operator::GreaterOrEqual
+            | Operator::LessOrEqual => 1,
+            Operator::EqualBool => 0,
+            _ => -1,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
