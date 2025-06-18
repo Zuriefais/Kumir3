@@ -222,7 +222,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior {
                 });
             }
             Pane::Vello(vello_options) => {
-                let available_size = ui.available_size();
+                let available_size = ui.available_size() * ui.ctx().pixels_per_point();
                 if let Ok(mut vello_options) = vello_options.lock() {
                     if vello_options.width != available_size.x as u32
                         || vello_options.height != available_size.y as u32

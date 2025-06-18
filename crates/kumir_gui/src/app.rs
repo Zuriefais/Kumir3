@@ -151,6 +151,10 @@ impl AppState {
             if vello_size.changed && vello_size.height != 0 && vello_size.height != 0 {
                 vello_window_changed = true;
                 vello_size.changed = false;
+                info!(
+                    "Vello texture size changed: {}, {}",
+                    vello_size.width, vello_size.height
+                );
                 self.vello_texture =
                     create_vello_texture(&self.device, vello_size.width, vello_size.height);
             }
