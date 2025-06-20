@@ -1,3 +1,5 @@
+use log::info;
+
 use crate::lexer::{self, Delimiter, Keyword, Operator, Token, TypeDefinition};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -8,20 +10,18 @@ pub enum AstNode {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct VarDecl {
+    name: String,
+    type_def: TypeDefinition,
+    value: Option<Expr>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Stmt {
-    VarDecl {
-        name: String,
-        type_def: TypeDefinition,
-        value: Option<Expr>,
-    },
-    Assign {
-        name: String,
-        value: Expr,
-    },
-    Alg {
-        name: String,
-        body: Vec<Stmt>,
-    },
+    VarDecl(VarDecl),
+    VarsDecl(Vec<VarDecl>),
+    Assign { name: String, value: Expr },
+    Alg { name: String, body: Vec<Stmt> },
     Start,
     Stop,
 }
@@ -107,19 +107,47 @@ impl Parser {
             Token::Identifier(name) => name.clone(),
             _ => return Err("Expected identifier".to_string()),
         };
+        info!("Creating var with name: {}", &name);
         self.advance();
-        let value = if self.check(&Token::Operator(lexer::Operator::Assignment)) {
-            self.advance();
-            Some(self.parse_expr()?)
-        } else {
-            None
-        };
-        self.expect(Token::Delimiter(Delimiter::Semicolon))?;
-        Ok(Stmt::VarDecl {
-            name,
-            type_def: type_def.clone(),
-            value,
-        })
+
+        match self.current_token() {
+            Token::Operator(lexer::Operator::Assignment) => {
+                self.advance();
+                let value = Some(self.parse_expr()?);
+                Ok(Stmt::VarDecl(VarDecl {
+                    name,
+                    type_def: type_def.clone(),
+                    value,
+                }))
+            }
+            Token::Delimiter(Delimiter::Comma) => {
+                let mut vars = vec![VarDecl {
+                    name: name.clone(),
+                    type_def: type_def.clone(),
+                    value: None,
+                }];
+                while self.check(&Token::Delimiter(Delimiter::Comma)) {
+                    self.advance();
+                    match self.current_token() {
+                        Token::Identifier(name) => {
+                            vars.push(VarDecl {
+                                name: name.clone(),
+                                type_def: type_def.clone(),
+                                value: None,
+                            });
+                        }
+                        _ => return Err(format!("Couldn't construct a vars sequence")),
+                    };
+                    self.advance();
+                }
+                Ok(Stmt::VarsDecl(vars))
+            }
+            _ => Ok(Stmt::VarDecl(VarDecl {
+                name,
+                type_def: type_def.clone(),
+                value: None,
+            })),
+        }
     }
 
     fn parse_assign(&mut self) -> Result<Stmt, String> {

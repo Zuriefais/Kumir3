@@ -68,10 +68,15 @@ impl Operator {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Delimiter {
+    /// .
     Period,
+    /// ,
     Comma,
+    /// ;
     Semicolon,
+    /// (
     ParenthesisOpen,
+    /// )
     ParenthesisClose,
 }
 
