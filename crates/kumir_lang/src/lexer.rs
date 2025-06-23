@@ -89,6 +89,56 @@ pub enum Keyword {
     Start,
     Stop,
     TypeDef(TypeDefinition),
+    Condition(Condition),
+    Loop(Loop),
+    Range(Range),
+    IO(IO),
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Condition {
+    ///если
+    If,
+    ///всё
+    EndCondition,
+    ///то
+    Then,
+    ///иначе
+    Else,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Loop {
+    ///нц
+    Start,
+    ///кц
+    End,
+    ///кц_при
+    EndIf,
+    ///пока
+    While,
+    ///выход
+    Break,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Range {
+    /// для
+    For,
+    /// от
+    From,
+    /// до
+    To,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum IO {
+    ///ввод
+    Input,
+    ///нс
+    ChangeLine,
+    ///вывод
+    Output,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -111,6 +161,20 @@ impl From<&str> for Keyword {
             "лог" => Keyword::TypeDef(TypeDefinition::Bool),
             "сим" => Keyword::TypeDef(TypeDefinition::Char),
             "лит" => Keyword::TypeDef(TypeDefinition::String),
+            "если" => Keyword::Condition(Condition::If),
+            "все" => Keyword::Condition(Condition::EndCondition),
+            "то" => Keyword::Condition(Condition::Then),
+            "иначе" => Keyword::Condition(Condition::Else),
+            "нц" => Keyword::Loop(Loop::Start),
+            "кц_при" => Keyword::Loop(Loop::EndIf),
+            "кц" => Keyword::Loop(Loop::End),
+            "пока" => Keyword::Loop(Loop::While),
+            "для" => Keyword::Range(Range::For),
+            "от" => Keyword::Range(Range::From),
+            "до" => Keyword::Range(Range::To),
+            "ввод" => Keyword::IO(IO::Input),
+            "нс" => Keyword::IO(IO::ChangeLine),
+            "вывод" => Keyword::IO(IO::Output),
             _ => {
                 panic!("Error")
             }
@@ -173,8 +237,31 @@ impl Lexer {
                     self.next_token()
                 } else if c.is_alphabetic() || c == '_' {
                     let word = self.collect_word();
-                    if ["алг", "нач", "кон", "цел", "вещ", "лог", "сим", "лит"]
-                        .contains(&word.as_str())
+                    if [
+                        "алг",
+                        "нач",
+                        "кон",
+                        "цел",
+                        "вещ",
+                        "лог",
+                        "сим",
+                        "лит",
+                        "если",
+                        "все",
+                        "то",
+                        "иначе",
+                        "нц",
+                        "кц_при",
+                        "кц",
+                        "пока",
+                        "для",
+                        "от",
+                        "до",
+                        "ввод",
+                        "вывод",
+                        "нс",
+                    ]
+                    .contains(&word.as_str())
                     {
                         Ok(Token::Keyword(Keyword::from(word.as_str())))
                     } else if ["да", "нет"].contains(&word.as_str()) {

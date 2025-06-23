@@ -16,8 +16,9 @@ wasmtime = "33.0.0"
 log = { workspace = true }
 env_logger = "0.11.8"
 vello = "0.5.0"
-tracy-client = "0.18.1"
 
+[target.'cfg(unix)'.dependencies]
+tracy-client = "0.18.1"
 
 [profile.dev]
 opt-level = 0

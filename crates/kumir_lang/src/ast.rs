@@ -86,13 +86,16 @@ impl Parser {
 
     fn parse_alg(&mut self) -> Result<Stmt, String> {
         self.advance(); // Skip Alg
-        let name = match self.current_token() {
-            Token::Identifier(name) => name.clone(),
-            _ => return Err("Expected identifier after alg".to_string()),
+        let name = match self.current_token().clone() {
+            Token::Identifier(name) => {
+                self.advance();
+                name.clone()
+            }
+            _ => format!("main"),
         };
-        self.advance();
-        self.expect(Token::Delimiter(Delimiter::ParenthesisOpen))?;
-        self.expect(Token::Delimiter(Delimiter::ParenthesisClose))?;
+
+        // self.expect(Token::Delimiter(Delimiter::ParenthesisOpen))?;
+        // self.expect(Token::Delimiter(Delimiter::ParenthesisClose))?;
         let mut body = Vec::new();
         while !self.check(&Token::Keyword(Keyword::Stop)) && !self.is_eof() {
             body.push(self.parse_stmt()?);

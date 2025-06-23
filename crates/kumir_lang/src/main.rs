@@ -18,7 +18,15 @@ fn main() {
             Err(e) => println!("Ошибка: {}", e),
         }
     }
-    info!("Tokens {:#?}", &tokens);
+    info!(
+        "Tokens:\n{}",
+        tokens
+            .iter()
+            .enumerate()
+            .map(|(i, t)| format!("  {}: {:#?}", i, t))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
     let mut parser = Parser::new(tokens);
     let ast = parser.parse();
     info!("AST generated: {:#?}", ast)
