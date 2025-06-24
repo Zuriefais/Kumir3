@@ -1,6 +1,8 @@
 use log::info;
 
-use crate::lexer::{self, Delimiter, Keyword, Operator, Token, TypeDefinition};
+use crate::lexer::{
+    self, Condition, Delimiter, Keyword, Loop, Operator, Range, Token, TypeDefinition,
+};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum AstNode {
@@ -20,8 +22,35 @@ pub struct VarDecl {
 pub enum Stmt {
     VarDecl(VarDecl),
     VarsDecl(Vec<VarDecl>),
-    Assign { name: String, value: Expr },
-    Alg { name: String, body: Vec<Stmt> },
+    Assign {
+        name: String,
+        value: Expr,
+    },
+    Alg {
+        name: String,
+        body: Vec<Stmt>,
+    },
+    Condition {
+        condition: Expr,
+        left: Vec<Stmt>,
+        right: Option<Vec<Stmt>>,
+    },
+    Loop {
+        condition: Option<Expr>,
+        body: Vec<Stmt>,
+    },
+    ForLoop {
+        var: String,
+        start: Expr,
+        end: Expr,
+        body: Vec<Stmt>,
+    },
+    Repeat {
+        condition: Option<Expr>,
+        count: Expr,
+        body: Vec<Stmt>,
+    },
+    Break,
     Start,
     Stop,
 }
@@ -74,6 +103,9 @@ impl Parser {
                 self.advance();
                 Ok(Stmt::Start)
             }
+            Token::Keyword(Keyword::Condition(Condition::If)) => self.parse_condition(),
+            Token::Keyword(Keyword::Loop(Loop::Start)) => self.parse_loop(),
+            Token::Keyword(Keyword::Loop(Loop::Break)) => Ok(Stmt::Break),
             Token::Keyword(Keyword::Stop) => {
                 self.advance();
                 Ok(Stmt::Stop)
@@ -82,6 +114,99 @@ impl Parser {
             Token::Identifier(_) => self.parse_assign(),
             _ => Err(format!("Unexpected token: {:?}", self.current_token())),
         }
+    }
+
+    fn parse_condition(&mut self) -> Result<Stmt, String> {
+        self.advance();
+        todo!()
+    }
+
+    fn parse_loop(&mut self) -> Result<Stmt, String> {
+        self.advance();
+        match self.current_token() {
+            Token::Keyword(Keyword::Loop(Loop::While)) => self.parse_while_loop(),
+            Token::Int(times) => self.parse_repeat_loop(Expr::Literal(Literal::Int(*times))),
+            Token::Keyword(Keyword::Range(Range::For)) => self.parse_for_loop(),
+
+            _ => self.parse_simple_loop(),
+        }
+    }
+
+    fn parse_simple_loop(&mut self) -> Result<Stmt, String> {
+        self.advance();
+        let mut statements = Vec::new();
+        let mut condition = None;
+        while *self.current_token() != Token::Keyword(Keyword::Loop(Loop::End)) {
+            if *self.current_token() != Token::Keyword(Keyword::Loop(Loop::EndIf)) {
+                self.advance();
+                condition = Some(self.parse_expr()?);
+            } else {
+                statements.push(self.parse_stmt()?);
+            }
+        }
+        Ok(Stmt::Loop {
+            condition,
+            body: statements,
+        })
+    }
+
+    fn parse_while_loop(&mut self) -> Result<Stmt, String> {
+        self.advance();
+        let condition = Some(self.parse_expr()?);
+        let mut statements = Vec::new();
+        while *self.current_token() != Token::Keyword(Keyword::Loop(Loop::End)) {
+            statements.push(self.parse_stmt()?);
+        }
+        self.advance();
+        Ok(Stmt::Loop {
+            condition,
+            body: statements,
+        })
+    }
+
+    fn parse_for_loop(&mut self) -> Result<Stmt, String> {
+        self.advance();
+        let var = match self.current_token() {
+            Token::Identifier(name) => name.clone(),
+            _ => return Err("Expected identifier".to_string()),
+        };
+        self.advance();
+        self.expect(Token::Keyword(Keyword::Range(Range::From)))?;
+        let start = self.parse_expr()?;
+        self.expect(Token::Keyword(Keyword::Range(Range::To)))?;
+        let end = self.parse_expr()?;
+        let mut statements = Vec::new();
+        while *self.current_token() != Token::Keyword(Keyword::Loop(Loop::End)) {
+            statements.push(self.parse_stmt()?);
+        }
+        self.advance();
+        Ok(Stmt::ForLoop {
+            var,
+            start,
+            end,
+            body: statements,
+        })
+    }
+
+    fn parse_repeat_loop(&mut self, count: Expr) -> Result<Stmt, String> {
+        self.advance();
+        self.expect(Token::Keyword(Keyword::Loop(Loop::Times)))?;
+        let mut statements = Vec::new();
+        let mut condition = None;
+        while *self.current_token() != Token::Keyword(Keyword::Loop(Loop::End)) {
+            if *self.current_token() != Token::Keyword(Keyword::Loop(Loop::EndIf)) {
+                self.advance();
+                condition = Some(self.parse_expr()?);
+            } else {
+                statements.push(self.parse_stmt()?);
+            }
+        }
+        self.advance();
+        Ok(Stmt::Repeat {
+            condition,
+            count,
+            body: statements,
+        })
     }
 
     fn parse_alg(&mut self) -> Result<Stmt, String> {

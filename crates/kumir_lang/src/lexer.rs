@@ -119,6 +119,8 @@ pub enum Loop {
     While,
     ///выход
     Break,
+    ///раз
+    Times,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -169,6 +171,7 @@ impl From<&str> for Keyword {
             "кц_при" => Keyword::Loop(Loop::EndIf),
             "кц" => Keyword::Loop(Loop::End),
             "пока" => Keyword::Loop(Loop::While),
+            "раз" => Keyword::Loop(Loop::Times),
             "для" => Keyword::Range(Range::For),
             "от" => Keyword::Range(Range::From),
             "до" => Keyword::Range(Range::To),
@@ -260,6 +263,7 @@ impl Lexer {
                         "ввод",
                         "вывод",
                         "нс",
+                        "раз",
                     ]
                     .contains(&word.as_str())
                     {
