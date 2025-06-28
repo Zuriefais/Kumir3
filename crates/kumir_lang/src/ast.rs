@@ -118,7 +118,33 @@ impl Parser {
 
     fn parse_condition(&mut self) -> Result<Stmt, String> {
         self.advance();
-        todo!()
+        let condition = self.parse_expr()?;
+        self.expect(Token::Keyword(Keyword::Condition(Condition::Then)))?;
+
+        let mut left = Vec::new();
+        while !self.check(&Token::Keyword(Keyword::Condition(Condition::Else)))
+            && !self.check(&Token::Keyword(Keyword::Condition(Condition::EndCondition)))
+        {
+            left.push(self.parse_stmt()?);
+        }
+
+        let right = if self.check(&Token::Keyword(Keyword::Condition(Condition::Else))) {
+            self.advance();
+            let mut else_branch = Vec::new();
+            while !self.check(&Token::Keyword(Keyword::Condition(Condition::EndCondition))) {
+                else_branch.push(self.parse_stmt()?);
+            }
+            Some(else_branch)
+        } else {
+            None
+        };
+
+        self.expect(Token::Keyword(Keyword::Condition(Condition::EndCondition)))?;
+        Ok(Stmt::Condition {
+            condition,
+            left,
+            right,
+        })
     }
 
     fn parse_loop(&mut self) -> Result<Stmt, String> {
