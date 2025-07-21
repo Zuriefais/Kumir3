@@ -9,11 +9,16 @@ use std::sync::{Arc, Mutex};
 use vello::peniko::color::palette;
 use vello::wgpu::TextureFormat;
 use vello::{AaConfig, Renderer, RendererOptions, Scene};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
 use wgpu::Texture;
 use winit::application::ApplicationHandler;
 use winit::dpi::PhysicalSize;
 use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
+use winit::event_loop::EventLoop;
+#[cfg(target_arch = "wasm32")]
+use winit::platform::web::WindowExtWebSys;
 use winit::window::{Window, WindowId};
 
 pub struct AppState {
@@ -27,6 +32,7 @@ pub struct AppState {
     pub vello_renderer: Renderer,
     pub vello_scene: Scene,
     pub vello_texture: Texture,
+    pub window: Arc<Window>,
     vello_window_options: Arc<Mutex<VelloWindowOptions>>,
 }
 
@@ -51,22 +57,35 @@ fn create_vello_texture(device: &wgpu::Device, width: u32, height: u32) -> Textu
 }
 
 impl AppState {
-    async fn new(
-        instance: &wgpu::Instance,
-        surface: wgpu::Surface<'static>,
-        window: &Window,
-        width: u32,
-        height: u32,
-    ) -> Self {
-        let power_pref = wgpu::PowerPreference::default();
+    async fn new(window: Arc<Window>) -> Self {
+        info!("Creating App State...");
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
+            #[cfg(not(target_arch = "wasm32"))]
+            backends: wgpu::Backends::PRIMARY,
+            #[cfg(target_arch = "wasm32")]
+            backends: wgpu::Backends::BROWSER_WEBGPU,
+            ..Default::default()
+        });
+
+        let surface = instance
+            .create_surface(window.clone())
+            .expect("Failed to create surface!");
+        info!("Surface created");
+        let initial_width = 1920;
+        let initial_height = 1080;
+
+        let _ = window.request_inner_size(PhysicalSize::new(initial_width, initial_height));
+        let size = window.inner_size();
+        info!("Window size: {:?}", size);
+        let (width, height) = size.into();
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: power_pref,
-                force_fallback_adapter: false,
+                power_preference: wgpu::PowerPreference::default(),
                 compatible_surface: Some(&surface),
+                force_fallback_adapter: false,
             })
             .await
-            .expect("Failed to find an appropriate adapter");
+            .unwrap();
 
         let features = wgpu::Features::empty();
         let (device, queue) = adapter
@@ -83,7 +102,7 @@ impl AppState {
             .expect("Failed to create device");
 
         let swapchain_capabilities = surface.get_capabilities(&adapter);
-        let selected_format = wgpu::TextureFormat::Bgra8UnormSrgb;
+        let selected_format = wgpu::TextureFormat::Bgra8Unorm;
         let swapchain_format = swapchain_capabilities
             .formats
             .iter()
@@ -104,7 +123,7 @@ impl AppState {
 
         surface.configure(&device, &surface_config);
 
-        let egui_renderer = EguiRenderer::new(&device, surface_config.format, None, 1, window);
+        let egui_renderer = EguiRenderer::new(&device, surface_config.format, None, 1, &window);
         egui_renderer.context().set_style(gruvbox_dark_theme());
 
         let scale_factor = 1.0;
@@ -120,7 +139,7 @@ impl AppState {
         )
         .expect("Couldn't create renderer");
         let vello_scene = Scene::new();
-
+        info!("App State created!!");
         Self {
             device,
             queue,
@@ -131,7 +150,7 @@ impl AppState {
             kumir_gui,
             vello_renderer,
             vello_scene,
-
+            window,
             vello_texture,
             vello_window_options,
         }
@@ -244,41 +263,45 @@ impl AppState {
 }
 
 pub struct App {
-    instance: wgpu::Instance,
     state: Option<AppState>,
     window: Option<Arc<Window>>,
+    #[cfg(target_arch = "wasm32")]
+    proxy: Option<winit::event_loop::EventLoopProxy<AppState>>,
 }
 
 impl App {
-    pub fn new() -> Self {
-        let instance = egui_wgpu::wgpu::Instance::new(&wgpu::InstanceDescriptor::default());
+    pub fn new(#[cfg(target_arch = "wasm32")] event_loop: &EventLoop<AppState>) -> Self {
+        #[cfg(target_arch = "wasm32")]
+        let proxy = Some(event_loop.create_proxy());
         Self {
-            instance,
             state: None,
             window: None,
+            #[cfg(target_arch = "wasm32")]
+            proxy,
         }
     }
 
-    async fn set_window(&mut self, window: Window) {
-        let window = Arc::new(window);
+    #[allow(unused_mut)]
+    fn user_event(&mut self, _event_loop: &ActiveEventLoop, mut event: AppState) {
+        #[cfg(target_arch = "wasm32")]
+        {
+            event.window.request_redraw();
+            event.resize_surface(
+                event.window.inner_size().width,
+                event.window.inner_size().height,
+            );
+        }
+        self.state = Some(event);
+    }
+
+    async fn set_window(&mut self, window: Arc<Window>) {
+        info!("Setting window options");
         let initial_width = 1920;
         let initial_height = 1080;
 
         let _ = window.request_inner_size(PhysicalSize::new(initial_width, initial_height));
 
-        let surface = self
-            .instance
-            .create_surface(window.clone())
-            .expect("Failed to create surface!");
-
-        let state = AppState::new(
-            &self.instance,
-            surface,
-            &window,
-            initial_width,
-            initial_width,
-        )
-        .await;
+        let state = AppState::new(window.clone()).await;
 
         self.window.get_or_insert(window);
         self.state.get_or_insert(state);
@@ -306,21 +329,51 @@ impl App {
     }
 }
 
-impl ApplicationHandler for App {
+impl ApplicationHandler<AppState> for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        let window = event_loop
-            .create_window(Window::default_attributes())
-            .unwrap();
-        pollster::block_on(self.set_window(window));
+        info!("Window resumed");
+        #[allow(unused_mut)]
+        let mut window_attributes = Window::default_attributes();
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            use wasm_bindgen::JsCast;
+            use winit::platform::web::WindowAttributesExtWebSys;
+
+            const CANVAS_ID: &str = "canvas";
+
+            let window = wgpu::web_sys::window().unwrap_throw();
+            let document = window.document().unwrap_throw();
+            let canvas = document.get_element_by_id(CANVAS_ID).unwrap_throw();
+            let html_canvas_element = canvas.unchecked_into();
+            window_attributes = window_attributes.with_canvas(Some(html_canvas_element));
+        }
+
+        let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
+
+        info!("Window connected to winit. Starting set window future");
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            pollster::block_on(self.set_window(window));
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(proxy) = self.proxy.take() {
+                wasm_bindgen_futures::spawn_local(async move {
+                    assert!(proxy.send_event(AppState::new(window).await).is_ok())
+                });
+            }
+        }
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _: WindowId, event: WindowEvent) {
         // let egui render to process the event first
-        self.state
-            .as_mut()
-            .unwrap()
-            .egui_renderer
-            .handle_input(self.window.as_ref().unwrap(), &event);
+        if let Some(state) = self.state.as_mut() {
+            if let Some(window) = self.window.as_ref() {
+                state.egui_renderer.handle_input(window, &event);
+            }
+        }
 
         match event {
             WindowEvent::CloseRequested => {
@@ -330,7 +383,9 @@ impl ApplicationHandler for App {
             WindowEvent::RedrawRequested => {
                 self.handle_redraw();
 
-                self.window.as_ref().unwrap().request_redraw();
+                if let Some(window) = self.window.as_ref() {
+                    window.request_redraw();
+                }
             }
             WindowEvent::Resized(new_size) => {
                 self.handle_resized(new_size.width, new_size.height);
