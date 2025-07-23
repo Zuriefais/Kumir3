@@ -56,13 +56,13 @@ fn create_vello_texture(device: &wgpu::Device, width: u32, height: u32) -> Textu
 }
 
 impl AppState {
-    pub async fn new(window: Arc<Window>) -> Self {
+    pub async fn new(window: Arc<Window>) -> anyhow::Result<Self> {
         info!("Creating App State...");
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             #[cfg(not(target_arch = "wasm32"))]
             backends: wgpu::Backends::PRIMARY,
             #[cfg(target_arch = "wasm32")]
-            backends: wgpu::Backends::GL,
+            backends: wgpu::Backends::BROWSER_WEBGPU,
             ..Default::default()
         });
 
@@ -73,7 +73,7 @@ impl AppState {
         let width = 1920;
         let height = 1080;
 
-        let _ = window.request_inner_size(PhysicalSize::new(width, height));
+        // let _ = window.request_inner_size(PhysicalSize::new(width, height));
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::default(),
@@ -81,7 +81,7 @@ impl AppState {
                 force_fallback_adapter: false,
             })
             .await
-            .unwrap();
+            .expect("Could't request adapter");
 
         let features = wgpu::Features::empty();
         let (device, queue) = adapter
@@ -136,7 +136,8 @@ impl AppState {
         .expect("Couldn't create renderer");
         let vello_scene = Scene::new();
         info!("App State created!!");
-        Self {
+
+        Ok(Self {
             device,
             queue,
             surface,
@@ -149,7 +150,7 @@ impl AppState {
             window,
             vello_texture,
             vello_window_options,
-        }
+        })
     }
 
     pub fn resize_surface(&mut self, width: u32, height: u32) {
@@ -159,6 +160,7 @@ impl AppState {
     }
 
     pub fn handle_redraw(&mut self) {
+        info!("Redraw");
         let window = &self.window;
         let width = self.surface_config.width;
         let height = self.surface_config.height;

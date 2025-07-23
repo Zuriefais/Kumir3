@@ -14,12 +14,12 @@ use wasm_bindgen::prelude::*;
 
 pub struct App {
     #[cfg(target_arch = "wasm32")]
-    proxy: Option<winit::event_loop::EventLoopProxy<State>>,
+    proxy: Option<winit::event_loop::EventLoopProxy<AppState>>,
     state: Option<AppState>,
 }
 
 impl App {
-    pub fn new(#[cfg(target_arch = "wasm32")] event_loop: &EventLoop<State>) -> Self {
+    pub fn new(#[cfg(target_arch = "wasm32")] event_loop: &EventLoop<AppState>) -> Self {
         #[cfg(target_arch = "wasm32")]
         let proxy = Some(event_loop.create_proxy());
         Self {
@@ -49,13 +49,17 @@ impl ApplicationHandler<AppState> for App {
             window_attributes = window_attributes.with_canvas(Some(html_canvas_element));
         }
 
-        let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
+        let window = Arc::new(
+            event_loop
+                .create_window(window_attributes)
+                .expect("Unable to create window"),
+        );
 
         #[cfg(not(target_arch = "wasm32"))]
         {
             // If we are not on web we can use pollster to
             // await the
-            self.state = Some(pollster::block_on(AppState::new(window)));
+            self.state = Some(pollster::block_on(AppState::new(window)).unwrap());
         }
 
         #[cfg(target_arch = "wasm32")]
@@ -65,7 +69,7 @@ impl ApplicationHandler<AppState> for App {
                     assert!(
                         proxy
                             .send_event(
-                                State::new(window)
+                                AppState::new(window)
                                     .await
                                     .expect("Unable to create canvas!!!")
                             )
@@ -81,7 +85,7 @@ impl ApplicationHandler<AppState> for App {
         #[cfg(target_arch = "wasm32")]
         {
             event.window.request_redraw();
-            event.resize(
+            event.resize_surface(
                 event.window.inner_size().width,
                 event.window.inner_size().height,
             );
@@ -95,7 +99,9 @@ impl ApplicationHandler<AppState> for App {
         _window_id: winit::window::WindowId,
         event: WindowEvent,
     ) {
-        self.state.as_mut().unwrap().event(&event);
+        if let Some(state) = self.state.as_mut() {
+            state.event(&event);
+        }
         let state = match &mut self.state {
             Some(canvas) => canvas,
             None => return,
@@ -114,4 +120,10 @@ impl ApplicationHandler<AppState> for App {
             _ => {}
         }
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn request_redraw() {
+    log::info!("Requesting redraw");
 }

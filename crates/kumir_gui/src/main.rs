@@ -22,19 +22,6 @@ pub fn main() {
         console_log::init_with_level(Level::Trace);
     }
     info!("Starting App");
-    #[cfg(target_arch = "wasm32")]
-    if {
-        if let Some(window) = web_sys::window() {
-            let navigator = window.navigator();
-            navigator.gpu().is_object()
-        } else {
-            // No global window! This is probably running from a headless environment.
-            // e.g. `wasm-pack test --node`
-            false
-        }
-    } {
-        log::error!("This platform doesn't support WebGPU!");
-    }
     #[cfg(not(target_arch = "wasm32"))]
     {
         pollster::block_on(run());
