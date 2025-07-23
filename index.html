@@ -3,7 +3,21 @@
     <head>
         <meta charset="utf-8" />
         <title>Kumir 3</title>
-    <link rel="modulepreload" href="/kumir_gui-e3361f20909e659f.js" crossorigin="anonymous" integrity="sha384-ZTT3+sF9lSgBkW73rCo33hBcVUbbsK93Vi/VQ4MQ5EmJUYky7/ZDpAru0GTeSNRw"><link rel="preload" href="/kumir_gui-e3361f20909e659f_bg.wasm" crossorigin="anonymous" integrity="sha384-exd4biekGNq8zk7Yh30aiqEXM72jPxQbOPcTS1DLR7z5tYnBctohWJ6LAhmZN1Pn" as="fetch" type="application/wasm"></head>
+        <link
+            rel="modulepreload"
+            href="/Kumir3/kumir_gui-e3361f20909e659f.js"
+            crossorigin="anonymous"
+            integrity="sha384-ZTT3+sF9lSgBkW73rCo33hBcVUbbsK93Vi/VQ4MQ5EmJUYky7/ZDpAru0GTeSNRw"
+        />
+        <link
+            rel="preload"
+            href="/Kumir3/kumir_gui-e3361f20909e659f_bg.wasm"
+            crossorigin="anonymous"
+            integrity="sha384-exd4biekGNq8zk7Yh30aiqEXM72jPxQbOPcTS1DLR7z5tYnBctohWJ6LAhmZN1Pn"
+            as="fetch"
+            type="application/wasm"
+        />
+    </head>
     <body>
         <canvas id="canvas"></canvas>
         <script>
@@ -34,16 +48,20 @@
                 outline: none;
             }
         </style>
-    
-<script type="module">
-import init, * as bindings from '/kumir_gui-e3361f20909e659f.js';
-const wasm = await init({ module_or_path: '/kumir_gui-e3361f20909e659f_bg.wasm' });
 
+        <script type="module">
+            import init, * as bindings from "/Kumir3/kumir_gui-e3361f20909e659f.js";
+            const wasm = await init({
+                module_or_path: "/Kumir3/kumir_gui-e3361f20909e659f_bg.wasm",
+            });
 
-window.wasmBindings = bindings;
+            window.wasmBindings = bindings;
 
-
-dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
-
-</script></body>
+            dispatchEvent(
+                new CustomEvent("TrunkApplicationStarted", {
+                    detail: { wasm },
+                }),
+            );
+        </script>
+    </body>
 </html>
