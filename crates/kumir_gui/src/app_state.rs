@@ -81,7 +81,7 @@ impl AppState {
                 force_fallback_adapter: false,
             })
             .await
-            .expect("Could't request adapter");
+            .expect("Unable request adapter");
 
         let features = wgpu::Features::empty();
         let (device, queue) = adapter
@@ -160,7 +160,6 @@ impl AppState {
     }
 
     pub fn handle_redraw(&mut self) {
-        info!("Redraw");
         let window = &self.window;
         let width = self.surface_config.width;
         let height = self.surface_config.height;

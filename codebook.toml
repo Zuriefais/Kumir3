@@ -3,8 +3,13 @@ dictionaries = [
     "ru",
 ]
 words = [
+    "egui",
     "gruvbox",
     "kum",
+    "kumir",
+    "swapchain",
+    "vello",
+    "wgpu",
     "алг",
     "вещ",
     "кц",
