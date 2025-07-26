@@ -437,7 +437,7 @@ impl AstNode {
                 stmt.eval(environment)?;
                 Ok(())
             }
-            AstNode::Expr(expr) => todo!(),
+            AstNode::Expr(_) => Err(format!("Program couldn't exit with only expr")),
         }
     }
 }
