@@ -292,7 +292,10 @@ impl Lexer {
                     let delim: Delimiter = match c {
                         '.' => Delimiter::Period,
                         ',' => Delimiter::Comma,
-                        ';' => Delimiter::Semicolon,
+                        ';' => {
+                            self.advance();
+                            return self.next_token();
+                        }
                         '(' => Delimiter::ParenthesisOpen,
                         ')' => Delimiter::ParenthesisClose,
                         _ => panic!("error"),

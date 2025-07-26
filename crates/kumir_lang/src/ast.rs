@@ -447,7 +447,7 @@ impl Stmt {
                     let eval_result = match value {
                         Expr::Literal(literal) => Some(literal.clone()),
                         Expr::Identifier(_) => {
-                            if let Some(value) = environment.get_var(&var_decl.name) {
+                            if let Some(value) = environment.get_value(&var_decl.name) {
                                 Some(value.clone())
                             } else {
                                 return Err("Undefined variable".to_string());
@@ -458,9 +458,9 @@ impl Stmt {
                             Err(err) => return Err(err),
                         },
                     };
-                    environment.new_var(&var_decl.name, eval_result);
+                    environment.new_var(&var_decl.name, eval_result, var_decl.type_def);
                 } else {
-                    environment.new_var(&var_decl.name, None);
+                    environment.new_var(&var_decl.name, None, var_decl.type_def);
                 }
             }
             Stmt::VarsDecl(var_decls) => {
@@ -636,7 +636,7 @@ impl Expr {
         match self {
             Expr::Literal(literal) => Ok(literal.clone()),
             Expr::Identifier(name) => {
-                if let Some(value) = environment.get_var(name) {
+                if let Some(value) = environment.get_value(name) {
                     Ok(value.clone())
                 } else {
                     Err(format!("Undefined variable: {}", name))
@@ -654,8 +654,14 @@ pub struct Function {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Variable {
+    pub type_def: TypeDefinition,
+    pub value: Option<Literal>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Environment {
-    variables: HashMap<String, Option<Literal>>,
+    variables: HashMap<String, Variable>,
     functions: HashMap<String, Function>,
 }
 
@@ -667,19 +673,26 @@ impl Environment {
         }
     }
 
-    fn new_var(&mut self, name: &str, value: Option<Literal>) {
-        self.variables.insert(name.to_string(), value);
+    fn new_var(&mut self, name: &str, value: Option<Literal>, type_def: TypeDefinition) {
+        self.variables
+            .insert(name.to_string(), Variable { type_def, value });
     }
 
     fn assign_var(&mut self, name: &str, value: Literal) {
         if self.get_var_type(name) == Some(value.get_type()) {
-            self.variables.insert(name.to_string(), Some(value));
+            self.variables.insert(
+                name.to_string(),
+                Variable {
+                    type_def: value.get_type(),
+                    value: Some(value),
+                },
+            );
         }
     }
 
     fn get_var_type(&self, name: &str) -> Option<TypeDefinition> {
         if let Some(var) = self.get_var(name) {
-            return Some(var.get_type());
+            return Some(var.type_def);
         }
         None
     }
@@ -688,8 +701,11 @@ impl Environment {
         self.variables.contains_key(name)
     }
 
-    fn get_var(&self, name: &str) -> Option<Literal> {
-        self.variables.get(name)?.clone()
+    fn get_var(&self, name: &str) -> Option<Variable> {
+        Some(self.variables.get(name)?.clone())
+    }
+    fn get_value(&self, name: &str) -> Option<Literal> {
+        self.variables.get(name)?.clone().value
     }
 
     fn register_function(&mut self, name: &str, function: Function) {

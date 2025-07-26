@@ -32,7 +32,7 @@ fn main() {
     let ast = parser.parse();
     info!("AST generated: {:#?}", ast);
 
-    let mut interpreter = Interpreter::new(create_test_ast());
+    let mut interpreter = Interpreter::new(ast.unwrap());
 
     info!("Interpreter result: {:?}", interpreter.run());
 
