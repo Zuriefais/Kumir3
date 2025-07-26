@@ -477,43 +477,92 @@ impl Stmt {
                 condition,
                 left,
                 right,
-            } => match condition {
-                Expr::Literal(literal) => match literal {
-                    Literal::Int(_) => return Err(format!("Int couldn't be condition")),
-                    Literal::Float(_) => return Err(format!("Float couldn't be condition")),
-                    Literal::String(_) => return Err(format!("String couldn't be condition")),
-                    Literal::Char(_) => return Err(format!("Char couldn't be condition")),
-                    Literal::Bool(condition) => {
-                        execute_condition(left, right, *condition, environment)?;
+            } => {
+                execute_condition(
+                    left,
+                    right,
+                    check_condition(condition, environment)?,
+                    environment,
+                )?;
+            }
+            Stmt::Loop { condition, body } => {
+                if let Some(condition) = condition {
+                    while check_condition(condition, environment)? {
+                        execute_body(body, environment)?;
                     }
-                },
-                Expr::Identifier(_) => return Err(format!("Identifier couldn't be condition")),
-                Expr::BinaryOp(binary_op) => {
-                    let literal = binary_op.eval(environment)?;
-                    if let Literal::Bool(condition) = literal {
-                        execute_condition(left, right, condition, environment)?;
-                    } else {
-                        return Err(format!("{:?} couldn't be condition", literal));
+                } else {
+                    loop {
+                        execute_body(body, environment)?;
                     }
                 }
-            },
-            Stmt::Loop { condition, body } => todo!(),
+            }
             Stmt::ForLoop {
                 var,
                 start,
                 end,
                 body,
-            } => todo!(),
+            } => {
+                let step = 1;
+                let start = if let Literal::Int(start) = start.eval(environment)? {
+                    start
+                } else {
+                    return Err(format!("{:?} must be an integer value in loop", start));
+                };
+                let end = if let Literal::Int(end) = end.eval(environment)? {
+                    end
+                } else {
+                    return Err(format!("{:?} must be an integer value in loop", end));
+                };
+                environment.new_var(var, Some(Literal::Int(start)), TypeDefinition::Int);
+                while {
+                    if let Some(Literal::Int(i)) = environment.get_value(var) {
+                        if i != end { true } else { false }
+                    } else {
+                        false
+                    }
+                } {
+                    execute_body(body, environment)?;
+                    if let Some(Literal::Int(i)) = environment.get_value(var) {
+                        environment.assign_var(var, Literal::Int(i + step));
+                    }
+                }
+            }
             Stmt::Repeat {
                 condition,
                 count,
                 body,
-            } => todo!(),
+            } => {
+                let mut times = if let Literal::Int(times) = count.eval(environment)? {
+                    times
+                } else {
+                    return Err(format!("{:?} must be an integer value in loop", count));
+                };
+                loop {
+                    execute_body(body, environment)?;
+                    if times == 0 {
+                        break;
+                    }
+                    if let Some(condition) = condition {
+                        if !check_condition(condition, environment)? {
+                            break;
+                        }
+                    }
+                    times -= 1;
+                }
+            }
             Stmt::Break => todo!(),
             Stmt::Start => todo!(),
             Stmt::Stop => todo!(),
         }
         Ok(())
+    }
+}
+
+fn check_condition(condition: &Expr, environment: &mut Environment) -> Result<bool, String> {
+    let condition_val = condition.eval(environment)?;
+    match condition_val {
+        Literal::Bool(value) => Ok(value),
+        _ => Err(format!("{:?} must be a boolean value", condition_val)),
     }
 }
 

@@ -1,6 +1,6 @@
 use kumir_lang::{
     ast::{self, AstNode, Expr, Literal, Parser, Stmt, VarDecl},
-    interpreter::{self, Interpreter},
+    interpreter::Interpreter,
     lexer::{self, Lexer, Token},
 };
 use log::info;
