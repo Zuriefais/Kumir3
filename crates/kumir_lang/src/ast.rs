@@ -433,14 +433,23 @@ impl AstNode {
                 }
                 Ok(())
             }
-            AstNode::Stmt(stmt) => stmt.eval(environment),
+            AstNode::Stmt(stmt) => {
+                stmt.eval(environment)?;
+                Ok(())
+            }
             AstNode::Expr(expr) => todo!(),
         }
     }
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum EvalResult {
+    Normal,
+    Break,
+}
+
 impl Stmt {
-    pub fn eval(&self, environment: &mut Environment) -> Result<(), String> {
+    pub fn eval(&self, environment: &mut Environment) -> Result<EvalResult, String> {
         match self {
             Stmt::VarDecl(var_decl) => {
                 if let Some(value) = &var_decl.value {
@@ -488,11 +497,15 @@ impl Stmt {
             Stmt::Loop { condition, body } => {
                 if let Some(condition) = condition {
                     while check_condition(condition, environment)? {
-                        execute_body(body, environment)?;
+                        if EvalResult::Break == execute_body(body, environment)? {
+                            break;
+                        };
                     }
                 } else {
                     loop {
-                        execute_body(body, environment)?;
+                        if EvalResult::Break == execute_body(body, environment)? {
+                            break;
+                        };
                     }
                 }
             }
@@ -521,7 +534,9 @@ impl Stmt {
                         false
                     }
                 } {
-                    execute_body(body, environment)?;
+                    if EvalResult::Break == execute_body(body, environment)? {
+                        break;
+                    };
                     if let Some(Literal::Int(i)) = environment.get_value(var) {
                         environment.assign_var(var, Literal::Int(i + step));
                     }
@@ -538,7 +553,9 @@ impl Stmt {
                     return Err(format!("{:?} must be an integer value in loop", count));
                 };
                 loop {
-                    execute_body(body, environment)?;
+                    if EvalResult::Break == execute_body(body, environment)? {
+                        break;
+                    };
                     if times == 0 {
                         break;
                     }
@@ -550,11 +567,13 @@ impl Stmt {
                     times -= 1;
                 }
             }
-            Stmt::Break => todo!(),
+            Stmt::Break => {
+                return Ok(EvalResult::Break);
+            }
             Stmt::Start => todo!(),
             Stmt::Stop => todo!(),
         }
-        Ok(())
+        Ok(EvalResult::Normal)
     }
 }
 
@@ -766,9 +785,11 @@ impl Environment {
     }
 }
 
-fn execute_body(body: &[Stmt], environment: &mut Environment) -> Result<(), String> {
+fn execute_body(body: &[Stmt], environment: &mut Environment) -> Result<EvalResult, String> {
     for stmt in body {
-        stmt.eval(environment)?;
+        if EvalResult::Break == stmt.eval(environment)? {
+            return Ok(EvalResult::Break);
+        }
     }
-    Ok(())
+    Ok(EvalResult::Normal)
 }
