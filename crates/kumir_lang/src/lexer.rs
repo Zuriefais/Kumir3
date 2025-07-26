@@ -43,6 +43,8 @@ pub enum Operator {
     LessOrEqual,
     /// Equal to (=)
     Equal,
+    /// Not equal to (<>)
+    NotEqual,
     /// Equal to (==)
     EqualBool,
     /// Colon (:)
@@ -323,6 +325,10 @@ impl Lexer {
         );
 
         match (c, next) {
+            ('<', Some('>')) => {
+                self.advance();
+                Ok(Token::Operator(Operator::NotEqual))
+            }
             ('>', Some('=')) => {
                 self.advance();
                 Ok(Token::Operator(Operator::GreaterOrEqual))

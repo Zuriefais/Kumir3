@@ -4,3 +4,7 @@ members = ["crates/*"]
 
 [workspace.dependencies]
 log = "0.4.27"
+
+kumir_gui = { path = "crates/kumir_gui" }
+kumir_lang = { path = "crates/kumir_lang" }
+kumir_runtime = { path = "crates/kumir_runtime" }

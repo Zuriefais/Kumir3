@@ -1,3 +1,4 @@
+use hashbrown::HashMap;
 use log::info;
 
 use crate::lexer::{
@@ -59,11 +60,14 @@ pub enum Stmt {
 pub enum Expr {
     Literal(Literal),
     Identifier(String),
-    BinaryOp {
-        left: Box<Expr>,
-        op: Operator,
-        right: Box<Expr>,
-    },
+    BinaryOp(BinaryOp),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct BinaryOp {
+    left: Box<Expr>,
+    op: Operator,
+    right: Box<Expr>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -328,11 +332,11 @@ impl Parser {
             }
             self.advance();
             let right = self.parse_binary_expr(op_precedence + 1)?;
-            left = Expr::BinaryOp {
+            left = Expr::BinaryOp(BinaryOp {
                 left: Box::new(left),
                 op,
                 right: Box::new(right),
-            };
+            });
         }
         Ok(left)
     }
@@ -406,4 +410,265 @@ impl Parser {
     fn is_eof(&self) -> bool {
         self.current_token() == &Token::Eof
     }
+}
+
+impl AstNode {
+    pub fn eval(&self) -> Result<(), String> {
+        let mut environment = Environment::new();
+        match self {
+            AstNode::Program(stmts) => {
+                for stmt in stmts {
+                    stmt.eval(&mut environment)?;
+                }
+                Ok(())
+            }
+            AstNode::Stmt(stmt) => stmt.eval(&mut environment),
+            AstNode::Expr(expr) => todo!(),
+        }
+    }
+}
+
+impl Stmt {
+    pub fn eval(&self, environment: &mut Environment) -> Result<(), String> {
+        match self {
+            Stmt::VarDecl(var_decl) => {
+                if let Some(value) = &var_decl.value {
+                    let eval_result = match value {
+                        Expr::Literal(literal) => Some(literal.clone()),
+                        Expr::Identifier(_) => {
+                            if let Some(value) = environment.get_var(&var_decl.name) {
+                                Some(value.clone())
+                            } else {
+                                return Err("Undefined variable".to_string());
+                            }
+                        }
+                        Expr::BinaryOp(op) => match op.eval(environment) {
+                            Ok(result) => Some(result),
+                            Err(err) => return Err(err),
+                        },
+                    };
+                    environment.set_var(&var_decl.name, eval_result);
+                } else {
+                    environment.set_var(&var_decl.name, None);
+                }
+            }
+            Stmt::VarsDecl(var_decls) => {
+                for var_decl in var_decls {
+                    Stmt::VarDecl(var_decl.clone()).eval(environment)?;
+                }
+            }
+            Stmt::Assign { name, value } => todo!(),
+            Stmt::Alg { name, body } => todo!(),
+            Stmt::Condition {
+                condition,
+                left,
+                right,
+            } => match condition {
+                Expr::Literal(literal) => match literal {
+                    Literal::Int(_) => return Err(format!("Int couldn't be condition")),
+                    Literal::Float(_) => return Err(format!("Float couldn't be condition")),
+                    Literal::String(_) => return Err(format!("String couldn't be condition")),
+                    Literal::Char(_) => return Err(format!("Char couldn't be condition")),
+                    Literal::Bool(condition) => {
+                        if *condition {
+                        } else {
+                            todo!()
+                        }
+                    }
+                },
+                Expr::Identifier(_) => return Err(format!("Identifier couldn't be condition")),
+                Expr::BinaryOp(binary_op) => {
+                    if let Literal::Bool(condition) = binary_op.eval(environment)? {
+                        execute_condition(left, right, condition, environment)?;
+                    } else {
+                        return Err(format!("Not bool couldn't be condition"));
+                    }
+                }
+            },
+            Stmt::Loop { condition, body } => todo!(),
+            Stmt::ForLoop {
+                var,
+                start,
+                end,
+                body,
+            } => todo!(),
+            Stmt::Repeat {
+                condition,
+                count,
+                body,
+            } => todo!(),
+            Stmt::Break => todo!(),
+            Stmt::Start => todo!(),
+            Stmt::Stop => todo!(),
+        }
+        Ok(())
+    }
+}
+
+fn execute_condition(
+    left: &[Stmt],
+    right: &Option<Vec<Stmt>>,
+    condition: bool,
+    environment: &mut Environment,
+) -> Result<(), String> {
+    if condition {
+        execute_body(left, environment)?;
+    } else {
+        if let Some(right) = right {
+            execute_body(right, environment)?;
+        }
+    }
+    Ok(())
+}
+
+impl BinaryOp {
+    pub fn eval(&self, environment: &mut Environment) -> Result<Literal, String> {
+        let left_val = match &*self.left {
+            Expr::Literal(lit) => lit.clone(),
+            Expr::Identifier(name) => environment
+                .get_var(name)
+                .ok_or_else(|| format!("Undefined variable: {}", name))?,
+            Expr::BinaryOp(op) => op.eval(environment)?,
+        };
+
+        let right_val = match &*self.right {
+            Expr::Literal(lit) => lit.clone(),
+            Expr::Identifier(name) => environment
+                .get_var(name)
+                .ok_or_else(|| format!("Undefined variable: {}", name))?,
+            Expr::BinaryOp(op) => op.eval(environment)?,
+        };
+
+        match (&left_val, self.op, &right_val) {
+            //Equal operations
+            (Literal::Bool(left), Operator::EqualBool, Literal::Bool(right)) => {
+                Ok(Literal::Bool(left == right))
+            }
+            (Literal::Char(left), Operator::EqualBool, Literal::Char(right)) => {
+                Ok(Literal::Bool(left == right))
+            }
+            (Literal::Float(left), Operator::EqualBool, Literal::Float(right)) => {
+                Ok(Literal::Bool(left == right))
+            }
+            (Literal::Int(left), Operator::EqualBool, Literal::Int(right)) => {
+                Ok(Literal::Bool(left == right))
+            }
+            (Literal::String(left), Operator::EqualBool, Literal::String(right)) => {
+                Ok(Literal::Bool(left == right))
+            }
+            //Not equal operations
+            (Literal::Bool(left), Operator::NotEqual, Literal::Bool(right)) => {
+                Ok(Literal::Bool(left != right))
+            }
+            (Literal::Char(left), Operator::NotEqual, Literal::Char(right)) => {
+                Ok(Literal::Bool(left != right))
+            }
+            (Literal::Float(left), Operator::NotEqual, Literal::Float(right)) => {
+                Ok(Literal::Bool(left != right))
+            }
+            (Literal::Int(left), Operator::NotEqual, Literal::Int(right)) => {
+                Ok(Literal::Bool(left != right))
+            }
+            (Literal::String(left), Operator::NotEqual, Literal::String(right)) => {
+                Ok(Literal::Bool(left != right))
+            }
+            //Float operations
+            (Literal::Float(left), Operator::Plus, Literal::Float(right)) => {
+                Ok(Literal::Float(left + right))
+            }
+            (Literal::Float(left), Operator::Minus, Literal::Float(right)) => {
+                Ok(Literal::Float(left - right))
+            }
+            (Literal::Float(left), Operator::Multiply, Literal::Float(right)) => {
+                Ok(Literal::Float(left * right))
+            }
+            (Literal::Float(left), Operator::Divide, Literal::Float(right)) => {
+                Ok(Literal::Float(left / right))
+            }
+            (Literal::Float(left), Operator::Greater, Literal::Float(right)) => {
+                Ok(Literal::Bool(left > right))
+            }
+            (Literal::Float(left), Operator::GreaterOrEqual, Literal::Float(right)) => {
+                Ok(Literal::Bool(left >= right))
+            }
+            (Literal::Float(left), Operator::Less, Literal::Float(right)) => {
+                Ok(Literal::Bool(left < right))
+            }
+            (Literal::Float(left), Operator::LessOrEqual, Literal::Float(right)) => {
+                Ok(Literal::Bool(left <= right))
+            }
+            //Int operations
+            (Literal::Int(left), Operator::Plus, Literal::Int(right)) => {
+                Ok(Literal::Int(left + right))
+            }
+            (Literal::Int(left), Operator::Minus, Literal::Int(right)) => {
+                Ok(Literal::Int(left - right))
+            }
+            (Literal::Int(left), Operator::Multiply, Literal::Int(right)) => {
+                Ok(Literal::Int(left * right))
+            }
+            (Literal::Int(left), Operator::Divide, Literal::Int(right)) => {
+                Ok(Literal::Int(left / right))
+            }
+            (Literal::Int(left), Operator::Greater, Literal::Int(right)) => {
+                Ok(Literal::Bool(left > right))
+            }
+            (Literal::Int(left), Operator::GreaterOrEqual, Literal::Int(right)) => {
+                Ok(Literal::Bool(left >= right))
+            }
+            (Literal::Int(left), Operator::Less, Literal::Int(right)) => {
+                Ok(Literal::Bool(left < right))
+            }
+            (Literal::Int(left), Operator::LessOrEqual, Literal::Int(right)) => {
+                Ok(Literal::Bool(left <= right))
+            }
+
+            _ => Err(format!(
+                "Invalid operation: {:?} {:?} {:?}",
+                left_val, self.op, right_val
+            )),
+        }
+    }
+}
+
+pub struct Function {
+    params: Vec<String>,
+    body: Vec<Stmt>,
+}
+
+pub struct Environment {
+    variables: HashMap<String, Option<Literal>>,
+    functions: HashMap<String, Function>,
+}
+
+impl Environment {
+    pub fn new() -> Self {
+        Environment {
+            variables: HashMap::new(),
+            functions: HashMap::new(),
+        }
+    }
+
+    fn set_var(&mut self, name: &str, value: Option<Literal>) {
+        self.variables.insert(name.to_string(), value);
+    }
+
+    fn get_var(&self, name: &str) -> Option<Literal> {
+        self.variables.get(name)?.clone()
+    }
+
+    fn register_function(&mut self, name: &str, function: Function) {
+        self.functions.insert(name.to_string(), function);
+    }
+
+    fn get_function(&self, name: &str) -> Option<&Function> {
+        self.functions.get(name)
+    }
+}
+
+fn execute_body(body: &[Stmt], environment: &mut Environment) -> Result<(), String> {
+    for stmt in body {
+        stmt.eval(environment)?;
+    }
+    Ok(())
 }
