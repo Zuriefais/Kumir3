@@ -14,9 +14,9 @@ pub enum AstNode {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct VarDecl {
-    name: String,
-    type_def: TypeDefinition,
-    value: Option<Expr>,
+    pub name: String,
+    pub type_def: TypeDefinition,
+    pub value: Option<Expr>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -65,9 +65,9 @@ pub enum Expr {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct BinaryOp {
-    left: Box<Expr>,
-    op: Operator,
-    right: Box<Expr>,
+    pub left: Box<Expr>,
+    pub op: Operator,
+    pub right: Box<Expr>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -77,6 +77,18 @@ pub enum Literal {
     String(String),
     Char(char),
     Bool(bool),
+}
+
+impl Literal {
+    pub fn get_type(&self) -> TypeDefinition {
+        match self {
+            Literal::Int(_) => TypeDefinition::Int,
+            Literal::Float(_) => TypeDefinition::Float,
+            Literal::String(_) => TypeDefinition::String,
+            Literal::Char(_) => TypeDefinition::Char,
+            Literal::Bool(_) => TypeDefinition::Bool,
+        }
+    }
 }
 
 pub struct Parser {
@@ -413,16 +425,15 @@ impl Parser {
 }
 
 impl AstNode {
-    pub fn eval(&self) -> Result<(), String> {
-        let mut environment = Environment::new();
+    pub fn eval(&self, environment: &mut Environment) -> Result<(), String> {
         match self {
             AstNode::Program(stmts) => {
                 for stmt in stmts {
-                    stmt.eval(&mut environment)?;
+                    stmt.eval(environment)?;
                 }
                 Ok(())
             }
-            AstNode::Stmt(stmt) => stmt.eval(&mut environment),
+            AstNode::Stmt(stmt) => stmt.eval(environment),
             AstNode::Expr(expr) => todo!(),
         }
     }
@@ -447,9 +458,9 @@ impl Stmt {
                             Err(err) => return Err(err),
                         },
                     };
-                    environment.set_var(&var_decl.name, eval_result);
+                    environment.new_var(&var_decl.name, eval_result);
                 } else {
-                    environment.set_var(&var_decl.name, None);
+                    environment.new_var(&var_decl.name, None);
                 }
             }
             Stmt::VarsDecl(var_decls) => {
@@ -457,7 +468,10 @@ impl Stmt {
                     Stmt::VarDecl(var_decl.clone()).eval(environment)?;
                 }
             }
-            Stmt::Assign { name, value } => todo!(),
+            Stmt::Assign { name, value } => {
+                let value = value.eval(environment)?;
+                environment.assign_var(name, value);
+            }
             Stmt::Alg { name, body } => todo!(),
             Stmt::Condition {
                 condition,
@@ -470,18 +484,16 @@ impl Stmt {
                     Literal::String(_) => return Err(format!("String couldn't be condition")),
                     Literal::Char(_) => return Err(format!("Char couldn't be condition")),
                     Literal::Bool(condition) => {
-                        if *condition {
-                        } else {
-                            todo!()
-                        }
+                        execute_condition(left, right, *condition, environment)?;
                     }
                 },
                 Expr::Identifier(_) => return Err(format!("Identifier couldn't be condition")),
                 Expr::BinaryOp(binary_op) => {
-                    if let Literal::Bool(condition) = binary_op.eval(environment)? {
+                    let literal = binary_op.eval(environment)?;
+                    if let Literal::Bool(condition) = literal {
                         execute_condition(left, right, condition, environment)?;
                     } else {
-                        return Err(format!("Not bool couldn't be condition"));
+                        return Err(format!("{:?} couldn't be condition", literal));
                     }
                 }
             },
@@ -523,21 +535,9 @@ fn execute_condition(
 
 impl BinaryOp {
     pub fn eval(&self, environment: &mut Environment) -> Result<Literal, String> {
-        let left_val = match &*self.left {
-            Expr::Literal(lit) => lit.clone(),
-            Expr::Identifier(name) => environment
-                .get_var(name)
-                .ok_or_else(|| format!("Undefined variable: {}", name))?,
-            Expr::BinaryOp(op) => op.eval(environment)?,
-        };
+        let left_val = self.left.eval(environment)?;
 
-        let right_val = match &*self.right {
-            Expr::Literal(lit) => lit.clone(),
-            Expr::Identifier(name) => environment
-                .get_var(name)
-                .ok_or_else(|| format!("Undefined variable: {}", name))?,
-            Expr::BinaryOp(op) => op.eval(environment)?,
-        };
+        let right_val = self.right.eval(environment)?;
 
         match (&left_val, self.op, &right_val) {
             //Equal operations
@@ -631,11 +631,29 @@ impl BinaryOp {
     }
 }
 
+impl Expr {
+    pub fn eval(&self, environment: &mut Environment) -> Result<Literal, String> {
+        match self {
+            Expr::Literal(literal) => Ok(literal.clone()),
+            Expr::Identifier(name) => {
+                if let Some(value) = environment.get_var(name) {
+                    Ok(value.clone())
+                } else {
+                    Err(format!("Undefined variable: {}", name))
+                }
+            }
+            Expr::BinaryOp(binary_op) => binary_op.eval(environment),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Function {
-    params: Vec<String>,
+    params: Vec<TypeDefinition>,
     body: Vec<Stmt>,
 }
 
+#[derive(Debug, PartialEq, Clone)]
 pub struct Environment {
     variables: HashMap<String, Option<Literal>>,
     functions: HashMap<String, Function>,
@@ -649,8 +667,25 @@ impl Environment {
         }
     }
 
-    fn set_var(&mut self, name: &str, value: Option<Literal>) {
+    fn new_var(&mut self, name: &str, value: Option<Literal>) {
         self.variables.insert(name.to_string(), value);
+    }
+
+    fn assign_var(&mut self, name: &str, value: Literal) {
+        if self.get_var_type(name) == Some(value.get_type()) {
+            self.variables.insert(name.to_string(), Some(value));
+        }
+    }
+
+    fn get_var_type(&self, name: &str) -> Option<TypeDefinition> {
+        if let Some(var) = self.get_var(name) {
+            return Some(var.get_type());
+        }
+        None
+    }
+
+    fn check_var_exist(&mut self, name: &str) -> bool {
+        self.variables.contains_key(name)
     }
 
     fn get_var(&self, name: &str) -> Option<Literal> {

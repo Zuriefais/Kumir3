@@ -1,17 +1,18 @@
 use log::info;
 
 use crate::{
-    ast::{AstNode, Parser},
+    ast::{AstNode, Environment, Parser},
     lexer::{Lexer, Token},
 };
 
 pub struct Interpreter {
     pub ast: AstNode,
+    pub environment: Environment,
 }
 
 impl Interpreter {
     pub fn run(&mut self) -> Result<(), String> {
-        match self.ast.eval() {
+        match self.ast.eval(&mut self.environment) {
             Ok(()) => {
                 info!("Все ок!!");
                 Ok(())
@@ -21,7 +22,10 @@ impl Interpreter {
     }
 
     pub fn new(ast: AstNode) -> Self {
-        Interpreter { ast }
+        Interpreter {
+            ast,
+            environment: Environment::new(),
+        }
     }
 
     pub fn new_from_tokens(tokens: Vec<Token>) -> Result<Self, String> {
