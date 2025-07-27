@@ -1,7 +1,5 @@
 use crate::executors::robot::Robot;
 use vello::Scene;
-use vello::kurbo::{Affine, Circle, Ellipse, Line, Point, RoundedRect, Stroke};
-use vello::peniko::Color;
 
 mod robot;
 

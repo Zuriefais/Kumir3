@@ -17,7 +17,7 @@ impl Interpreter {
                 info!("Все ок!!");
                 Ok(())
             }
-            Err(e) => Err(format!("Ошибка выполнения: {}", e)),
+            Err(e) => Err(format!("Ошибка выполнения: {e}")),
         }
     }
 
@@ -41,7 +41,7 @@ impl Interpreter {
                 Ok(token) => {
                     tokens.push(token);
                 }
-                Err(e) => println!("Ошибка: {}", e),
+                Err(e) => println!("Ошибка: {e}"),
             }
         }
         Self::new_from_tokens(tokens)

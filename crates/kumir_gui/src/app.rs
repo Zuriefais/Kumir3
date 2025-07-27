@@ -1,11 +1,10 @@
 use crate::app_state::AppState;
-use std::{iter, sync::Arc};
+use std::sync::Arc;
 
 use winit::{
     application::ApplicationHandler,
     event::*,
-    event_loop::{ActiveEventLoop, EventLoop},
-    keyboard::{KeyCode, PhysicalKey},
+    event_loop::ActiveEventLoop,
     window::Window,
 };
 

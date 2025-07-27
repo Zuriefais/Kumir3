@@ -59,7 +59,7 @@ impl Runtime for Interpreter {
 pub struct DummyRuntimeRequirements {}
 impl RuntimeRequirements for DummyRuntimeRequirements {
     fn println(&self, message: &str) {
-        info!("{}", message);
+        info!("{message}");
     }
 }
 

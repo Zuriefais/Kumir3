@@ -7,7 +7,7 @@ use log::info;
 
 fn main() {
     env_logger::init();
-    let code = include_str!("test2.kum");
+    let code = include_str!("test.kum");
     let mut lexer = Lexer::new(code);
     let mut tokens = vec![];
     loop {
@@ -16,7 +16,7 @@ fn main() {
             Ok(token) => {
                 tokens.push(token);
             }
-            Err(e) => println!("Ошибка: {}", e),
+            Err(e) => println!("Ошибка: {e}"),
         }
     }
     info!(
@@ -24,13 +24,14 @@ fn main() {
         tokens
             .iter()
             .enumerate()
-            .map(|(i, t)| format!("  {}: {:#?}", i, t))
+            .map(|(i, t)| format!("  {i}: {t:#?}"))
             .collect::<Vec<_>>()
             .join("\n")
     );
     let mut parser = Parser::new(tokens);
     let ast = parser.parse();
-    info!("AST generated: {:#?}", ast);
+    info!("AST generated: {ast:#?}");
+    info!("AST generator stopped at token: {}", parser.position);
 
     let mut interpreter = Interpreter::new(ast.unwrap());
 

@@ -1,4 +1,3 @@
-use egui::Color32;
 
 struct GruvboxColors {
     bg: egui::Color32,

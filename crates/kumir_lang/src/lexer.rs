@@ -215,7 +215,7 @@ impl Lexer {
     }
 
     pub fn skip_whitespace(&mut self) {
-        while self.current_char.map_or(false, |c| c.is_whitespace()) {
+        while self.current_char.is_some_and(|c| c.is_whitespace()) {
             self.advance();
         }
     }
@@ -279,7 +279,7 @@ impl Lexer {
                     } else {
                         Ok(Token::Identifier(word))
                     }
-                } else if c.is_digit(10) {
+                } else if c.is_ascii_digit() {
                     Ok(match self.collect_number() {
                         Number::Float(f) => Token::Float(f),
                         Number::Int(i) => Token::Int(i),
@@ -312,7 +312,7 @@ impl Lexer {
                     self.advance();
                     char_token
                 } else {
-                    Err(format!("Неизвестный символ: {}", c))
+                    Err(format!("Неизвестный символ: {c}"))
                 }
             }
         }
@@ -357,8 +357,7 @@ impl Lexer {
             ('*', _) => Ok(Token::Operator(Operator::Multiply)),
             ('/', _) => Ok(Token::Operator(Operator::Divide)),
             (_, _) => Err(format!(
-                "Couldn't collect operator from: {:?}, {:?}",
-                c, next
+                "Couldn't collect operator from: {c:?}, {next:?}"
             )),
         }
     }
@@ -375,7 +374,7 @@ impl Lexer {
 
     pub fn collect_string(&mut self) -> String {
         let mut str = String::new();
-        while self.current_char.map_or(false, |c| c != '"') {
+        while self.current_char.is_some_and(|c| c != '"') {
             str.push(self.current_char.unwrap());
             self.advance();
         }
@@ -387,7 +386,7 @@ impl Lexer {
         let mut word = String::new();
         while self
             .current_char
-            .map_or(false, |c| c.is_alphanumeric() || c == '_')
+            .is_some_and(|c| c.is_alphanumeric() || c == '_')
         {
             word.push(self.current_char.unwrap());
             self.advance();
@@ -400,7 +399,7 @@ impl Lexer {
         let mut is_float = false;
         while self
             .current_char
-            .map_or(false, |c| c.is_digit(10) || c == '.')
+            .is_some_and(|c| c.is_ascii_digit() || c == '.')
         {
             if self.current_char.unwrap() == '.' {
                 is_float = true

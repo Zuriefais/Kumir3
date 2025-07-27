@@ -1,8 +1,10 @@
+use std::fmt::Display;
+
 use hashbrown::HashMap;
 use log::info;
 
 use crate::lexer::{
-    self, Condition, Delimiter, Keyword, Loop, Operator, Range, Token, TypeDefinition,
+    self, Condition, Delimiter, IO, Keyword, Loop, Operator, Range, Token, TypeDefinition,
 };
 
 #[derive(Debug, PartialEq, Clone)]
@@ -51,6 +53,9 @@ pub enum Stmt {
         count: Expr,
         body: Vec<Stmt>,
     },
+    Output {
+        values: Vec<Expr>,
+    },
     Break,
     Start,
     Stop,
@@ -61,6 +66,7 @@ pub enum Expr {
     Literal(Literal),
     Identifier(String),
     BinaryOp(BinaryOp),
+    NewLine,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -79,6 +85,18 @@ pub enum Literal {
     Bool(bool),
 }
 
+impl Display for Literal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Literal::Int(value) => write!(f, "{}", value),
+            Literal::Float(value) => write!(f, "{}", value),
+            Literal::String(value) => write!(f, "\"{}\"", value),
+            Literal::Char(value) => write!(f, "'{}'", value),
+            Literal::Bool(value) => write!(f, "{}", value),
+        }
+    }
+}
+
 impl Literal {
     pub fn get_type(&self) -> TypeDefinition {
         match self {
@@ -92,8 +110,8 @@ impl Literal {
 }
 
 pub struct Parser {
-    tokens: Vec<Token>,
-    position: usize,
+    pub tokens: Vec<Token>,
+    pub position: usize,
 }
 
 impl Parser {
@@ -128,8 +146,48 @@ impl Parser {
             }
             Token::Keyword(Keyword::TypeDef(type_def)) => self.parse_var_decl(&type_def),
             Token::Identifier(_) => self.parse_assign(),
+            Token::Keyword(Keyword::IO(io_keyword)) => self.parse_io(io_keyword),
             _ => Err(format!("Unexpected token: {:?}", self.current_token())),
         }
+    }
+
+    fn parse_io(&mut self, io_keyword: IO) -> Result<Stmt, String> {
+        match io_keyword {
+            IO::Input => self.parse_input(),
+            IO::Output => self.parse_output(),
+            IO::ChangeLine => return Err(format!("Change line couldn't be Statement")),
+        }
+    }
+
+    fn parse_input(&mut self) -> Result<Stmt, String> {
+        self.advance();
+
+        todo!()
+    }
+
+    fn parse_output(&mut self) -> Result<Stmt, String> {
+        self.advance();
+        let mut values = Vec::new();
+
+        while !self.is_eof() {
+            match self.current_token().clone() {
+                Token::Keyword(Keyword::IO(IO::ChangeLine)) => {
+                    values.push(Expr::NewLine);
+                    self.advance();
+                }
+                Token::Delimiter(Delimiter::Comma) => {
+                    self.advance();
+                    continue;
+                }
+                Token::Keyword(_) => break,
+                _ => {
+                    let expr = self.parse_expr()?;
+                    values.push(expr);
+                }
+            }
+        }
+
+        Ok(Stmt::Output { values })
     }
 
     fn parse_condition(&mut self) -> Result<Stmt, String> {
@@ -231,21 +289,15 @@ impl Parser {
     }
 
     fn parse_repeat_loop(&mut self, count: Expr) -> Result<Stmt, String> {
-        self.advance();
+        self.advance(); // Skip the count
         self.expect(Token::Keyword(Keyword::Loop(Loop::Times)))?;
         let mut statements = Vec::new();
-        let mut condition = None;
-        while *self.current_token() != Token::Keyword(Keyword::Loop(Loop::End)) {
-            if *self.current_token() != Token::Keyword(Keyword::Loop(Loop::EndIf)) {
-                self.advance();
-                condition = Some(self.parse_expr()?);
-            } else {
-                statements.push(self.parse_stmt()?);
-            }
+        while !self.check(&Token::Keyword(Keyword::Loop(Loop::End))) {
+            statements.push(self.parse_stmt()?); // Parse statements, not expressions
         }
-        self.advance();
+        self.advance(); // Skip Loop::End
         Ok(Stmt::Repeat {
-            condition,
+            condition: None,
             count,
             body: statements,
         })
@@ -258,7 +310,7 @@ impl Parser {
                 self.advance();
                 name.clone()
             }
-            _ => format!("main"),
+            _ => "main".to_string(),
         };
 
         // self.expect(Token::Delimiter(Delimiter::ParenthesisOpen))?;
@@ -286,14 +338,14 @@ impl Parser {
                 let value = Some(self.parse_expr()?);
                 Ok(Stmt::VarDecl(VarDecl {
                     name,
-                    type_def: type_def.clone(),
+                    type_def: *type_def,
                     value,
                 }))
             }
             Token::Delimiter(Delimiter::Comma) => {
                 let mut vars = vec![VarDecl {
                     name: name.clone(),
-                    type_def: type_def.clone(),
+                    type_def: *type_def,
                     value: None,
                 }];
                 while self.check(&Token::Delimiter(Delimiter::Comma)) {
@@ -302,11 +354,11 @@ impl Parser {
                         Token::Identifier(name) => {
                             vars.push(VarDecl {
                                 name: name.clone(),
-                                type_def: type_def.clone(),
+                                type_def: *type_def,
                                 value: None,
                             });
                         }
-                        _ => return Err(format!("Couldn't construct a vars sequence")),
+                        _ => return Err("Couldn't construct a vars sequence".to_string()),
                     };
                     self.advance();
                 }
@@ -314,7 +366,7 @@ impl Parser {
             }
             _ => Ok(Stmt::VarDecl(VarDecl {
                 name,
-                type_def: type_def.clone(),
+                type_def: *type_def,
                 value: None,
             })),
         }
@@ -380,6 +432,7 @@ impl Parser {
                 self.advance();
                 Ok(Expr::Identifier(name))
             }
+
             Token::Delimiter(Delimiter::ParenthesisOpen) => {
                 self.advance();
                 let expr = self.parse_expr()?;
@@ -437,7 +490,7 @@ impl AstNode {
                 stmt.eval(environment)?;
                 Ok(())
             }
-            AstNode::Expr(_) => Err(format!("Program couldn't exit with only expr")),
+            AstNode::Expr(_) => Err("Program couldn't exit with only expr".to_string()),
         }
     }
 }
@@ -453,20 +506,7 @@ impl Stmt {
         match self {
             Stmt::VarDecl(var_decl) => {
                 if let Some(value) = &var_decl.value {
-                    let eval_result = match value {
-                        Expr::Literal(literal) => Some(literal.clone()),
-                        Expr::Identifier(_) => {
-                            if let Some(value) = environment.get_value(&var_decl.name) {
-                                Some(value.clone())
-                            } else {
-                                return Err("Undefined variable".to_string());
-                            }
-                        }
-                        Expr::BinaryOp(op) => match op.eval(environment) {
-                            Ok(result) => Some(result),
-                            Err(err) => return Err(err),
-                        },
-                    };
+                    let eval_result = Some(value.eval(environment)?);
                     environment.new_var(&var_decl.name, eval_result, var_decl.type_def);
                 } else {
                     environment.new_var(&var_decl.name, None, var_decl.type_def);
@@ -519,17 +559,17 @@ impl Stmt {
                 let start = if let Literal::Int(start) = start.eval(environment)? {
                     start
                 } else {
-                    return Err(format!("{:?} must be an integer value in loop", start));
+                    return Err(format!("{start:?} must be an integer value in loop"));
                 };
                 let end = if let Literal::Int(end) = end.eval(environment)? {
                     end
                 } else {
-                    return Err(format!("{:?} must be an integer value in loop", end));
+                    return Err(format!("{end:?} must be an integer value in loop"));
                 };
                 environment.new_var(var, Some(Literal::Int(start)), TypeDefinition::Int);
                 while {
                     if let Some(Literal::Int(i)) = environment.get_value(var) {
-                        if i != end { true } else { false }
+                        i != end
                     } else {
                         false
                     }
@@ -550,7 +590,7 @@ impl Stmt {
                 let mut times = if let Literal::Int(times) = count.eval(environment)? {
                     times
                 } else {
-                    return Err(format!("{:?} must be an integer value in loop", count));
+                    return Err(format!("{count:?} must be an integer value in loop"));
                 };
                 loop {
                     if EvalResult::Break == execute_body(body, environment)? {
@@ -559,10 +599,10 @@ impl Stmt {
                     if times == 0 {
                         break;
                     }
-                    if let Some(condition) = condition {
-                        if !check_condition(condition, environment)? {
-                            break;
-                        }
+                    if let Some(condition) = condition
+                        && !check_condition(condition, environment)?
+                    {
+                        break;
                     }
                     times -= 1;
                 }
@@ -572,6 +612,16 @@ impl Stmt {
             }
             Stmt::Start => todo!(),
             Stmt::Stop => todo!(),
+            Stmt::Output { values } => {
+                println!();
+                for value in values {
+                    if Expr::NewLine == *value {
+                        println!();
+                    } else {
+                        print!("{}", value.eval(environment)?);
+                    }
+                }
+            }
         }
         Ok(EvalResult::Normal)
     }
@@ -581,7 +631,7 @@ fn check_condition(condition: &Expr, environment: &mut Environment) -> Result<bo
     let condition_val = condition.eval(environment)?;
     match condition_val {
         Literal::Bool(value) => Ok(value),
-        _ => Err(format!("{:?} must be a boolean value", condition_val)),
+        _ => Err(format!("{condition_val:?} must be a boolean value")),
     }
 }
 
@@ -593,10 +643,8 @@ fn execute_condition(
 ) -> Result<(), String> {
     if condition {
         execute_body(left, environment)?;
-    } else {
-        if let Some(right) = right {
-            execute_body(right, environment)?;
-        }
+    } else if let Some(right) = right {
+        execute_body(right, environment)?;
     }
     Ok(())
 }
@@ -707,10 +755,11 @@ impl Expr {
                 if let Some(value) = environment.get_value(name) {
                     Ok(value.clone())
                 } else {
-                    Err(format!("Undefined variable: {}", name))
+                    Err(format!("Undefined variable: {name}"))
                 }
             }
             Expr::BinaryOp(binary_op) => binary_op.eval(environment),
+            Expr::NewLine => return Err(format!("New line couldn't be Literal")),
         }
     }
 }
@@ -731,6 +780,12 @@ pub struct Variable {
 pub struct Environment {
     variables: HashMap<String, Variable>,
     functions: HashMap<String, Function>,
+}
+
+impl Default for Environment {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Environment {

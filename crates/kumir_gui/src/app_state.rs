@@ -13,12 +13,11 @@ use vello::{AaConfig, Renderer, RendererOptions, Scene};
 use wasm_bindgen::prelude::*;
 use wgpu::Texture;
 
-use winit::dpi::PhysicalSize;
 use winit::event::WindowEvent;
 
 #[cfg(target_arch = "wasm32")]
 use winit::platform::web::WindowExtWebSys;
-use winit::window::{Window, WindowId};
+use winit::window::Window;
 
 pub struct AppState {
     pub device: wgpu::Device,
@@ -164,8 +163,8 @@ impl AppState {
         let width = self.surface_config.width;
         let height = self.surface_config.height;
         let mut vello_window_changed = false;
-        if let Ok(mut vello_size) = self.vello_window_options.lock() {
-            if vello_size.changed && vello_size.height != 0 && vello_size.height != 0 {
+        if let Ok(mut vello_size) = self.vello_window_options.lock()
+            && vello_size.changed && vello_size.height != 0 && vello_size.height != 0 {
                 vello_window_changed = true;
                 vello_size.changed = false;
                 info!(
@@ -175,7 +174,6 @@ impl AppState {
                 self.vello_texture =
                     create_vello_texture(&self.device, vello_size.width, vello_size.height);
             }
-        }
         self.vello_scene.reset();
 
         // Re-add the objects to draw to the scene.
@@ -215,13 +213,12 @@ impl AppState {
                 ),
                 ..Default::default()
             });
-        if vello_window_changed {
-            if let Ok(mut vello_options) = self.vello_window_options.lock() {
+        if vello_window_changed
+            && let Ok(mut vello_options) = self.vello_window_options.lock() {
                 vello_options.texture = self
                     .egui_renderer
                     .register_native_texture(&self.device, &vello_view);
             }
-        }
 
         let mut encoder = self
             .device
@@ -261,6 +258,6 @@ impl AppState {
     }
 
     pub fn event(&mut self, event: &WindowEvent) {
-        self.egui_renderer.handle_input(&self.window, &event);
+        self.egui_renderer.handle_input(&self.window, event);
     }
 }

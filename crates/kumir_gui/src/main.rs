@@ -9,7 +9,6 @@ use log::info;
 #[cfg(unix)]
 use tracy_client::Client;
 
-use log::Level;
 use winit::event_loop::{ControlFlow, EventLoop};
 
 pub fn main() {

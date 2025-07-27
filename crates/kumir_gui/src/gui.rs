@@ -53,14 +53,13 @@ impl fmt::Display for Modes {
 
 impl KumirGui {
     pub fn new(context: &Context, vello_options: Arc<Mutex<VelloWindowOptions>>) -> Self {
-        let gui = Self {
+        Self {
             egui_context: context.clone(),
 
             selected_mode: Modes::None,
 
             tree: create_tree(vello_options.clone()),
-        };
-        gui
+        }
     }
 
     pub fn render_gui(&mut self) {
@@ -125,11 +124,11 @@ struct TreeBehavior {}
 impl egui_tiles::Behavior<Pane> for TreeBehavior {
     fn tab_title_for_pane(&mut self, pane: &Pane) -> egui::WidgetText {
         match pane {
-            Pane::Unknown(u) => format!("{}", u).into(),
-            Pane::Terminal => format!("Terminal").into(),
-            Pane::Tools => format!("Tools").into(),
-            Pane::IDE(_) => format!("IDE").into(),
-            Pane::Vello(_) => format!("Vello window").into(),
+            Pane::Unknown(u) => format!("{u}").into(),
+            Pane::Terminal => "Terminal".to_string().into(),
+            Pane::Tools => "Tools".to_string().into(),
+            Pane::IDE(_) => "IDE".to_string().into(),
+            Pane::Vello(_) => "Vello window".to_string().into(),
         }
     }
     fn pane_ui(
@@ -149,11 +148,11 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior {
                 ui.label(format!(
                     "Pane {}",
                     match pane {
-                        Pane::Unknown(nr) => format!("{}", nr),
-                        Pane::Terminal => format!("Terminal"),
-                        Pane::Tools => format!("Tools"),
-                        Pane::IDE(_) => format!("IDE"),
-                        Pane::Vello(_) => format!("Vello"),
+                        Pane::Unknown(nr) => format!("{nr}"),
+                        Pane::Terminal => "Terminal".to_string(),
+                        Pane::Tools => "Tools".to_string(),
+                        Pane::IDE(_) => "IDE".to_string(),
+                        Pane::Vello(_) => "Vello".to_string(),
                     }
                 )); // Title text
                 ui.allocate_space(ui.available_size()); // Fill remaining space
@@ -167,7 +166,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior {
 
         match pane {
             Pane::Unknown(nr) => {
-                ui.label(format!("The contents of pane {}.", nr));
+                ui.label(format!("The contents of pane {nr}."));
             }
             Pane::Terminal => todo!(),
             Pane::Tools => todo!(),

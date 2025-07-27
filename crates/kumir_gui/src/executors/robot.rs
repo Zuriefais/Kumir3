@@ -1,7 +1,5 @@
-use egui::panel::Side;
-use log::info;
 use vello::Scene;
-use vello::kurbo::{Affine, Circle, Ellipse, Line, Point, Rect, RoundedRect, Stroke};
+use vello::kurbo::{Affine, Line, Point, Rect, Stroke};
 use vello::peniko::Color;
 
 pub struct Cell {
@@ -40,9 +38,9 @@ impl Robot {
         cell_size: f64,
     ) -> Self {
         Self {
-            width: width,
-            height: height,
-            cell_size: cell_size,
+            width,
+            height,
+            cell_size,
             vertical_borders: {
                 let mut borders = vec![vec![false; height]; width + 1];
 
