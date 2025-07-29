@@ -4,6 +4,7 @@ mod egui_tools;
 mod executors;
 mod gruvbox_egui;
 mod gui;
+mod kumir_state;
 
 use log::info;
 #[cfg(unix)]

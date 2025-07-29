@@ -3,6 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use crate::kumir_state::KumirState;
 use egui::{Context, TextureId, load::SizedTexture};
 use egui_extras::syntax_highlighting::highlight;
 
@@ -23,41 +24,19 @@ pub struct IDEWindowOptions {
 
 pub struct KumirGui {
     egui_context: Context,
-
-    selected_mode: Modes,
+    kumir_state: KumirState,
     tree: egui_tiles::Tree<Pane>,
 }
 
-#[derive(PartialEq, Eq, Clone)]
-enum Modes {
-    None,
-    Kuznechik,
-    Vodolei,
-    Cherepaha,
-    Chertezhnik,
-    Robot,
-}
-
-impl fmt::Display for Modes {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Modes::None => write!(f, "Не выбрано"),
-            Modes::Kuznechik => write!(f, "Кузнечик"),
-            Modes::Vodolei => write!(f, "Водолей"),
-            Modes::Robot => write!(f, "Робот"),
-            Modes::Chertezhnik => write!(f, "Чертежник"),
-            Modes::Cherepaha => write!(f, "Черепаха"),
-        }
-    }
-}
-
 impl KumirGui {
-    pub fn new(context: &Context, vello_options: Arc<Mutex<VelloWindowOptions>>) -> Self {
+    pub fn new(
+        context: &Context,
+        kumir_state: KumirState,
+        vello_options: Arc<Mutex<VelloWindowOptions>>,
+    ) -> Self {
         Self {
             egui_context: context.clone(),
-
-            selected_mode: Modes::None,
-
+            kumir_state: kumir_state,
             tree: create_tree(vello_options.clone()),
         }
     }

@@ -1,11 +1,12 @@
 use crate::egui_tools::EguiRenderer;
-use crate::executors::add_shapes_to_scene;
 use crate::gruvbox_egui::gruvbox_dark_theme;
 use crate::gui::{KumirGui, VelloWindowOptions};
+use crate::kumir_state::KumirState;
 use egui_wgpu::wgpu::SurfaceError;
 use egui_wgpu::{ScreenDescriptor, wgpu};
 use log::info;
 use std::sync::{Arc, Mutex};
+use std::thread;
 use vello::peniko::color::palette;
 use vello::wgpu::TextureFormat;
 use vello::{AaConfig, Renderer, RendererOptions, Scene};
@@ -28,10 +29,11 @@ pub struct AppState {
     pub egui_renderer: EguiRenderer,
     pub kumir_gui: KumirGui,
     pub vello_renderer: Renderer,
-    pub vello_scene: Scene,
+    pub vello_scene: Arc<Mutex<Scene>>,
     pub vello_texture: Texture,
     pub window: Arc<Window>,
     vello_window_options: Arc<Mutex<VelloWindowOptions>>,
+    pub kumir_state: KumirState,
 }
 
 fn create_vello_texture(device: &wgpu::Device, width: u32, height: u32) -> Texture {
@@ -133,8 +135,10 @@ impl AppState {
             },
         )
         .expect("Couldn't create renderer");
-        let vello_scene = Scene::new();
+        let vello_scene = Arc::new(Mutex::new(Scene::new()));
         info!("App State created!!");
+
+        let kumir_state = KumirState::new(Arc::clone(&vello_scene), width, height);
 
         Ok(Self {
             device,
@@ -149,6 +153,7 @@ impl AppState {
             window,
             vello_texture,
             vello_window_options,
+            kumir_state,
         })
     }
 
@@ -164,20 +169,23 @@ impl AppState {
         let height = self.surface_config.height;
         let mut vello_window_changed = false;
         if let Ok(mut vello_size) = self.vello_window_options.lock()
-            && vello_size.changed && vello_size.height != 0 && vello_size.height != 0 {
-                vello_window_changed = true;
-                vello_size.changed = false;
-                info!(
-                    "Vello texture size changed: {}, {}",
-                    vello_size.width, vello_size.height
-                );
-                self.vello_texture =
-                    create_vello_texture(&self.device, vello_size.width, vello_size.height);
-            }
-        self.vello_scene.reset();
+            && vello_size.changed
+            && vello_size.height != 0
+            && vello_size.height != 0
+        {
+            vello_window_changed = true;
+            vello_size.changed = false;
+            info!(
+                "Vello texture size changed: {}, {}",
+                vello_size.width, vello_size.height
+            );
+            self.vello_texture =
+                create_vello_texture(&self.device, vello_size.width, vello_size.height);
+        }
+        self.vello_scene.lock().unwrap().reset();
 
         // Re-add the objects to draw to the scene.
-        add_shapes_to_scene(&mut self.vello_scene, width, height);
+        self.kumir_state.add_shapes_to_scene();
 
         let screen_descriptor = ScreenDescriptor {
             size_in_pixels: [width, height],
@@ -213,12 +221,11 @@ impl AppState {
                 ),
                 ..Default::default()
             });
-        if vello_window_changed
-            && let Ok(mut vello_options) = self.vello_window_options.lock() {
-                vello_options.texture = self
-                    .egui_renderer
-                    .register_native_texture(&self.device, &vello_view);
-            }
+        if vello_window_changed && let Ok(mut vello_options) = self.vello_window_options.lock() {
+            vello_options.texture = self
+                .egui_renderer
+                .register_native_texture(&self.device, &vello_view);
+        }
 
         let mut encoder = self
             .device
@@ -229,7 +236,7 @@ impl AppState {
                 .render_to_texture(
                     &self.device,
                     &self.queue,
-                    &self.vello_scene,
+                    &self.vello_scene.lock().unwrap(),
                     &vello_view,
                     &vello::RenderParams {
                         base_color: palette::css::BLACK, // Background color

@@ -1,7 +1,7 @@
 use crate::executors::robot::Robot;
 use vello::Scene;
 
-mod robot;
+pub mod robot;
 
 pub fn add_shapes_to_scene(scene: &mut Scene, width: u32, height: u32) {
     let rob = Robot::new(9, 9, 100.0);

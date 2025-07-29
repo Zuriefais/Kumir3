@@ -1,3 +1,4 @@
+use std::sync::{Arc, Mutex};
 use vello::Scene;
 use vello::kurbo::{Affine, Line, Point, Rect, Stroke};
 use vello::peniko::Color;
