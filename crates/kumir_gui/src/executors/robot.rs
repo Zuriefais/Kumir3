@@ -1,3 +1,4 @@
+use log::info;
 use std::sync::{Arc, Mutex};
 use vello::Scene;
 use vello::kurbo::{Affine, Line, Point, Rect, Stroke};
@@ -224,6 +225,7 @@ impl Robot {
         self.fill_cells(scene);
         self.draw_grid(scene);
         self.draw_robot(scene);
+        info!("x: {x} y: {y}", x = self.x, y = self.y)
     }
 
     // Robot API
@@ -237,12 +239,16 @@ impl Robot {
             self.x = self.width - 1;
         } else if new_x < 0 {
             self.x = 0;
+        } else {
+            self.x = new_x as usize;
         }
 
-        if new_y >= self.width as i64 {
-            self.y = self.width - 1;
+        if new_y >= self.height as i64 {
+            self.y = self.height - 1;
         } else if new_y < 0 {
             self.y = 0;
+        } else {
+            self.y = new_y as usize;
         }
     }
 
@@ -256,6 +262,7 @@ impl Robot {
 
     pub fn move_right(&mut self) {
         self.move_robot(1, 0);
+        info!("moved right")
     }
 
     pub fn move_left(&mut self) {

@@ -1,9 +1,6 @@
-use std::{
-    fmt,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
-use crate::kumir_state::KumirState;
+use crate::kumir_state::{KumirState, Modes};
 use egui::{Context, TextureId, load::SizedTexture};
 use egui_extras::syntax_highlighting::highlight;
 
@@ -48,6 +45,7 @@ impl KumirGui {
                     .add(egui::Button::new("Запустить").frame(false))
                     .clicked()
                 {
+                    self.kumir_state.run();
                     info!("Something should run");
                 }
 
@@ -59,15 +57,35 @@ impl KumirGui {
                 }
 
                 egui::ComboBox::from_id_salt("mode")
-                    .selected_text(self.selected_mode.to_string())
+                    .selected_text(self.kumir_state.selected_mode.to_string())
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.selected_mode, Modes::None, "Не выбрано");
-                        ui.selectable_value(&mut self.selected_mode, Modes::Kuznechik, "Кузнечик");
-                        ui.selectable_value(&mut self.selected_mode, Modes::Vodolei, "Водолей");
-                        ui.selectable_value(&mut self.selected_mode, Modes::Robot, "Робот");
-                        ui.selectable_value(&mut self.selected_mode, Modes::Cherepaha, "Черепаха");
                         ui.selectable_value(
-                            &mut self.selected_mode,
+                            &mut self.kumir_state.selected_mode,
+                            Modes::None,
+                            "Не выбрано",
+                        );
+                        ui.selectable_value(
+                            &mut self.kumir_state.selected_mode,
+                            Modes::Kuznechik,
+                            "Кузнечик",
+                        );
+                        ui.selectable_value(
+                            &mut self.kumir_state.selected_mode,
+                            Modes::Vodolei,
+                            "Водолей",
+                        );
+                        ui.selectable_value(
+                            &mut self.kumir_state.selected_mode,
+                            Modes::Robot,
+                            "Робот",
+                        );
+                        ui.selectable_value(
+                            &mut self.kumir_state.selected_mode,
+                            Modes::Cherepaha,
+                            "Черепаха",
+                        );
+                        ui.selectable_value(
+                            &mut self.kumir_state.selected_mode,
                             Modes::Chertezhnik,
                             "Чертежник",
                         );
@@ -87,6 +105,10 @@ impl KumirGui {
             let mut behavior = TreeBehavior {};
             self.tree.ui(&mut behavior, ui);
         });
+    }
+
+    pub fn add_shapes_to_scene(&mut self) {
+        self.kumir_state.add_shapes_to_scene();
     }
 }
 

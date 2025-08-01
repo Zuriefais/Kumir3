@@ -3,10 +3,11 @@ use vello::Scene;
 
 pub mod robot;
 
-pub fn add_shapes_to_scene(scene: &mut Scene, width: u32, height: u32) {
-    let rob = Robot::new(9, 9, 100.0);
-    rob.draw_field(scene);
-}
+// pub fn add_shapes_to_scene(scene: &mut Scene, width: u32, height: u32) {
+//     let rob = Robot::new(9, 9, 100.0);
+//     rob.draw_field(scene);
+// }
+
 // pub fn add_shapes_to_scene(scene: &mut Scene, width: u32, height: u32) {
 //     draw_grid(scene, width as f64, height as f64, 25.0);
 //     // Draw an outlined rectangle

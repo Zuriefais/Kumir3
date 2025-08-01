@@ -33,7 +33,6 @@ pub struct AppState {
     pub vello_texture: Texture,
     pub window: Arc<Window>,
     vello_window_options: Arc<Mutex<VelloWindowOptions>>,
-    pub kumir_state: KumirState,
 }
 
 fn create_vello_texture(device: &wgpu::Device, width: u32, height: u32) -> Texture {
@@ -125,7 +124,6 @@ impl AppState {
 
         let scale_factor = 1.0;
         let vello_window_options: Arc<Mutex<VelloWindowOptions>> = Default::default();
-        let kumir_gui = KumirGui::new(egui_renderer.context(), vello_window_options.clone());
 
         let vello_texture = create_vello_texture(&device, 100, 100);
         let vello_renderer = Renderer::new(
@@ -139,6 +137,11 @@ impl AppState {
         info!("App State created!!");
 
         let kumir_state = KumirState::new(Arc::clone(&vello_scene), width, height);
+        let kumir_gui = KumirGui::new(
+            egui_renderer.context(),
+            kumir_state,
+            vello_window_options.clone(),
+        );
 
         Ok(Self {
             device,
@@ -153,7 +156,6 @@ impl AppState {
             window,
             vello_texture,
             vello_window_options,
-            kumir_state,
         })
     }
 
@@ -185,7 +187,7 @@ impl AppState {
         self.vello_scene.lock().unwrap().reset();
 
         // Re-add the objects to draw to the scene.
-        self.kumir_state.add_shapes_to_scene();
+        self.kumir_gui.add_shapes_to_scene();
 
         let screen_descriptor = ScreenDescriptor {
             size_in_pixels: [width, height],

@@ -1,7 +1,10 @@
 use crate::executors::robot::Robot;
+use log::info;
 use std::fmt;
 use std::sync::{Arc, Mutex};
+use std::time;
 use vello::Scene;
+use wasm_thread as thread;
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum Modes {
@@ -26,10 +29,16 @@ impl fmt::Display for Modes {
     }
 }
 
+struct ModesStored {
+    robot: Arc<Mutex<Robot>>,
+}
+
 pub struct KumirState {
     scene: Arc<Mutex<Scene>>,
     width: u32,
     height: u32,
+    pub selected_mode: Modes,
+    pub modes: ModesStored,
 }
 
 impl KumirState {
@@ -38,11 +47,38 @@ impl KumirState {
             scene: scene,
             width: width,
             height: height,
+            selected_mode: Modes::None,
+            modes: ModesStored {
+                robot: Arc::new(Mutex::new(Robot::new(9, 9, 100.0))),
+            },
         }
     }
 
     pub fn add_shapes_to_scene(&mut self) {
-        let rob = Robot::new(9, 9, 100.0);
-        rob.draw_field(&mut self.scene.lock().unwrap());
+        match self.selected_mode {
+            // Modes::None => todo!(),
+            // Modes::Kuznechik => todo!(),
+            // Modes::Vodolei => todo!(),
+            // Modes::Cherepaha => todo!(),
+            // Modes::Chertezhnik => todo!(),
+            Modes::Robot => self
+                .modes
+                .robot
+                .lock()
+                .unwrap()
+                .draw_field(&mut self.scene.lock().unwrap()),
+            _ => (),
+        }
+    }
+
+    pub fn run(&mut self) {
+        let rob = Arc::clone(&self.modes.robot);
+        info!("run");
+
+        thread::spawn(move || {
+            rob.lock().unwrap().move_right();
+            thread::sleep(time::Duration::from_millis(1000));
+            rob.lock().unwrap().move_left();
+        });
     }
 }
