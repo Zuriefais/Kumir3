@@ -1,3 +1,5 @@
+use std::fmt;
+
 use log::info;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -152,6 +154,18 @@ pub enum TypeDefinition {
     Float,
     String,
     Char,
+}
+
+impl fmt::Display for TypeDefinition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            TypeDefinition::Int => "Int",
+            TypeDefinition::Bool => "Bool",
+            TypeDefinition::Float => "Float",
+            TypeDefinition::String => "String",
+            TypeDefinition::Char => "Char",
+        })
+    }
 }
 
 impl From<&str> for Keyword {
@@ -356,9 +370,7 @@ impl Lexer {
             ('-', _) => Ok(Token::Operator(Operator::Minus)),
             ('*', _) => Ok(Token::Operator(Operator::Multiply)),
             ('/', _) => Ok(Token::Operator(Operator::Divide)),
-            (_, _) => Err(format!(
-                "Couldn't collect operator from: {c:?}, {next:?}"
-            )),
+            (_, _) => Err(format!("Couldn't collect operator from: {c:?}, {next:?}")),
         }
     }
 
