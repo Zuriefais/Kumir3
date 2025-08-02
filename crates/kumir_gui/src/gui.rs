@@ -248,6 +248,10 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                         let Vec2 { x, y } = input.pointer.delta();
                         self.kumir_state.change_offset(x, y);
                     }
+
+                    let zoom_delta = input.zoom_delta();
+                    self.kumir_state.change_scale(zoom_delta as f64 - 1.0);
+
                     // for event in &input.events {
                     //     info!("Event: {:?}", event);
                     // }

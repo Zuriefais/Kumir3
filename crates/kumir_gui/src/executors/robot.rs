@@ -211,7 +211,6 @@ impl Robot {
 
         let transform = Affine::translate((center_x, center_y))
             * Affine::rotate(45f64.to_radians())
-            * Affine::scale(self.scale)
             * Affine::translate((-center_x, -center_y));
 
         scene.fill(
@@ -224,10 +223,17 @@ impl Robot {
     }
 
     pub fn draw_field(&self, scene: &mut Scene) {
-        self.clear_field(scene);
-        self.fill_cells(scene);
-        self.draw_grid(scene);
-        self.draw_robot(scene);
+        let mut new_scene = Scene::new();
+        self.clear_field(&mut new_scene);
+        self.fill_cells(&mut new_scene);
+        self.draw_grid(&mut new_scene);
+        self.draw_robot(&mut new_scene);
+
+        let center_x = self.width as f64 / 2.0 * self.cell_size + self.o;
+        let center_y = self.height as f64 / 2.0 * self.cell_size + self.i;
+        let transform = Affine::translate((center_x, center_y)) * Affine::scale(self.scale);
+
+        scene.append(&new_scene, Some(transform));
     }
 
     // Robot API

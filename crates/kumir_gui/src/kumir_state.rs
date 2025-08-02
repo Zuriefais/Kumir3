@@ -94,9 +94,10 @@ impl KumirState {
         }
     }
 
-    // pub fn change_scale(&mut self, scale_delta: f64) {
-    //     match self.selected_mode {
-    //         Modes::Robot => self.
-    //     }
-    // }
+    pub fn change_scale(&mut self, scale_delta: f64) {
+        match self.selected_mode {
+            Modes::Robot => self.modes.robot.lock().unwrap().change_scale(scale_delta),
+            _ => (),
+        }
+    }
 }
