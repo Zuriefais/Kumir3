@@ -57,8 +57,6 @@ pub enum Stmt {
         values: Vec<Expr>,
     },
     Break,
-    Start,
-    Stop,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -66,7 +64,14 @@ pub enum Expr {
     Literal(Literal),
     Identifier(String),
     BinaryOp(BinaryOp),
+    FunctionCall(FunctionCall),
     NewLine,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct FunctionCall {
+    pub name: String,
+    pub args: Vec<Expr>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -133,17 +138,9 @@ impl Parser {
     fn parse_stmt(&mut self) -> Result<Stmt, String> {
         match self.current_token().clone() {
             Token::Keyword(Keyword::Alg) => self.parse_alg(),
-            Token::Keyword(Keyword::Start) => {
-                self.advance();
-                Ok(Stmt::Start)
-            }
             Token::Keyword(Keyword::Condition(Condition::If)) => self.parse_condition(),
             Token::Keyword(Keyword::Loop(Loop::Start)) => self.parse_loop(),
             Token::Keyword(Keyword::Loop(Loop::Break)) => Ok(Stmt::Break),
-            Token::Keyword(Keyword::Stop) => {
-                self.advance();
-                Ok(Stmt::Stop)
-            }
             Token::Keyword(Keyword::TypeDef(type_def)) => self.parse_var_decl(&type_def),
             Token::Identifier(_) => self.parse_assign(),
             Token::Keyword(Keyword::IO(io_keyword)) => self.parse_io(io_keyword),
@@ -610,8 +607,7 @@ impl Stmt {
             Stmt::Break => {
                 return Ok(EvalResult::Break);
             }
-            Stmt::Start => todo!(),
-            Stmt::Stop => todo!(),
+
             Stmt::Output { values } => {
                 println!();
                 for value in values {
@@ -760,13 +756,60 @@ impl Expr {
             }
             Expr::BinaryOp(binary_op) => binary_op.eval(environment),
             Expr::NewLine => return Err(format!("New line couldn't be Literal")),
+            Expr::FunctionCall(call) => {
+                let mut params_literals = vec![];
+                for param in call.args.iter() {
+                    params_literals.push(param.eval(environment)?);
+                }
+                let function = environment
+                    .get_function(&call.name)
+                    .ok_or(format!("Function with name {} not found", &call.name))?
+                    .clone();
+                check_params(
+                    &function
+                        .params
+                        .iter()
+                        .map(|param| param.1)
+                        .collect::<Vec<TypeDefinition>>(),
+                    &params_literals
+                        .iter()
+                        .map(|param| param.get_type())
+                        .collect::<Vec<TypeDefinition>>(),
+                )?;
+                for (value, name) in params_literals
+                    .iter()
+                    .zip(function.params.iter().map(|param| param.0.clone()))
+                {
+                    environment.assign_var(&name, value.clone());
+                }
+                execute_body(&function.body, environment)?;
+                for name in function.params.iter().map(|param| param.0.clone()) {
+                    environment.remove_var(&name)?;
+                }
+
+                todo!()
+            }
         }
     }
 }
 
+fn check_params(params: &[TypeDefinition], params1: &[TypeDefinition]) -> Result<(), String> {
+    if params.len() != params1.len() {
+        return Err(format!("Len of params of function call is different"));
+    }
+
+    for (param, param1) in params.iter().zip(params1.iter()) {
+        if param != param1 {
+            return Err(format!("type of {} != {}", param, param1));
+        }
+    }
+
+    Ok(())
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Function {
-    params: Vec<TypeDefinition>,
+    params: Vec<(String, TypeDefinition)>,
     body: Vec<Stmt>,
 }
 
@@ -829,6 +872,13 @@ impl Environment {
     }
     fn get_value(&self, name: &str) -> Option<Literal> {
         self.variables.get(name)?.clone().value
+    }
+
+    fn remove_var(&mut self, name: &str) -> Result<(), String> {
+        self.variables
+            .remove(name)
+            .map(|_| ())
+            .ok_or_else(|| format!("No such variable exists"))
     }
 
     fn register_function(&mut self, name: &str, function: Function) {
