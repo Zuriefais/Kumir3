@@ -30,6 +30,7 @@ pub struct Robot {
     robot_border_color: Color,
     x: usize,
     y: usize,
+    scale: f64,
 }
 
 impl Robot {
@@ -75,6 +76,7 @@ impl Robot {
             y: 0,
             o: 100.0,
             i: 100.0,
+            scale: 1.0,
         }
     }
 
@@ -207,13 +209,14 @@ impl Robot {
             (self.cell_size / 3.0, self.cell_size / 3.0),
         );
 
-        let rotation = Affine::translate((center_x, center_y))
+        let transform = Affine::translate((center_x, center_y))
             * Affine::rotate(45f64.to_radians())
+            * Affine::scale(self.scale)
             * Affine::translate((-center_x, -center_y));
 
         scene.fill(
             vello::peniko::Fill::NonZero,
-            rotation,
+            transform,
             self.robot_color,
             None,
             &robot_shape,
@@ -307,5 +310,9 @@ impl Robot {
     pub fn change_offset(&mut self, o: f64, i: f64) {
         self.change_offset_x(o);
         self.change_offset_y(i);
+    }
+
+    pub fn change_scale(&mut self, delta_scale: f64) {
+        self.scale += delta_scale;
     }
 }
