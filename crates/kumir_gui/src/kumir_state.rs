@@ -29,7 +29,7 @@ impl fmt::Display for Modes {
     }
 }
 
-struct ModesStored {
+pub struct ModesStored {
     robot: Arc<Mutex<Robot>>,
 }
 
@@ -80,5 +80,17 @@ impl KumirState {
             thread::sleep(time::Duration::from_millis(1000));
             rob.lock().unwrap().move_left();
         });
+    }
+
+    pub fn change_offset(&mut self, o: f32, i: f32) {
+        match self.selected_mode {
+            Modes::Robot => self
+                .modes
+                .robot
+                .lock()
+                .unwrap()
+                .change_offset(o as f64, i as f64),
+            _ => (),
+        }
     }
 }

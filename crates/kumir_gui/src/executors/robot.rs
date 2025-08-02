@@ -225,7 +225,6 @@ impl Robot {
         self.fill_cells(scene);
         self.draw_grid(scene);
         self.draw_robot(scene);
-        info!("x: {x} y: {y}", x = self.x, y = self.y)
     }
 
     // Robot API
@@ -295,5 +294,18 @@ impl Robot {
 
     pub fn from_right(&self) -> bool {
         self.vertical_borders[self.x + 1][self.y]
+    }
+
+    pub fn change_offset_x(&mut self, o: f64) {
+        self.o += o;
+    }
+
+    pub fn change_offset_y(&mut self, i: f64) {
+        self.i += i;
+    }
+
+    pub fn change_offset(&mut self, o: f64, i: f64) {
+        self.change_offset_x(o);
+        self.change_offset_y(i);
     }
 }

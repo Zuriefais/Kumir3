@@ -1,6 +1,8 @@
+use std::option::Option;
 use std::sync::{Arc, Mutex};
 
 use crate::kumir_state::{KumirState, Modes};
+use egui::Vec2;
 use egui::{Context, TextureId, load::SizedTexture};
 use egui_extras::syntax_highlighting::highlight;
 
@@ -102,7 +104,9 @@ impl KumirGui {
             });
 
         egui::CentralPanel::default().show(&self.egui_context, |ui| {
-            let mut behavior = TreeBehavior {};
+            let mut behavior = TreeBehavior {
+                kumir_state: &mut self.kumir_state,
+            };
             self.tree.ui(&mut behavior, ui);
         });
     }
@@ -120,9 +124,11 @@ enum Pane {
     Vello(Arc<Mutex<VelloWindowOptions>>),
 }
 
-struct TreeBehavior {}
+struct TreeBehavior<'a> {
+    kumir_state: &'a mut KumirState,
+}
 
-impl egui_tiles::Behavior<Pane> for TreeBehavior {
+impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
     fn tab_title_for_pane(&mut self, pane: &Pane) -> egui::WidgetText {
         match pane {
             Pane::Unknown(u) => format!("{u}").into(),
@@ -236,6 +242,16 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior {
                         size: egui::Vec2::new(available_size.x, available_size.y),
                     });
                 }
+
+                ui.input(|input| {
+                    if input.pointer.button_down(egui::PointerButton::Primary) {
+                        let Vec2 { x, y } = input.pointer.delta();
+                        self.kumir_state.change_offset(x, y);
+                    }
+                    // for event in &input.events {
+                    //     info!("Event: {:?}", event);
+                    // }
+                })
             }
         }
         if title_bar_response.drag_started() {
