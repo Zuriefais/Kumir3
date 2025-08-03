@@ -1,9 +1,9 @@
-use std::option::Option;
 use std::sync::{Arc, Mutex};
 
 use crate::kumir_state::{KumirState, Modes};
 use egui::Vec2;
 use egui::{Context, TextureId, load::SizedTexture};
+use egui::{Response, Ui, Widget};
 use egui_extras::syntax_highlighting::highlight;
 
 use log::info;
@@ -95,13 +95,13 @@ impl KumirGui {
             })
         });
 
-        egui::TopBottomPanel::bottom("terminal")
-            .resizable(true)
-            // .default_height(200.0)
-            // .max_height(f32::INFINITY)
-            .show(&self.egui_context, |ui| {
-                ui.label("Тут может быть вывод программы");
-            });
+        // egui::TopBottomPanel::bottom("terminal")
+        //     .resizable(true)
+        //     // .default_height(200.0)
+        //     // .max_height(f32::INFINITY)
+        //     .show(&self.egui_context, |ui| {
+        //         ui.label("Тут может быть вывод программы");
+        //     });
 
         egui::CentralPanel::default().show(&self.egui_context, |ui| {
             let mut behavior = TreeBehavior {
@@ -122,6 +122,7 @@ enum Pane {
     Tools,
     IDE(IDEWindowOptions),
     Vello(Arc<Mutex<VelloWindowOptions>>),
+    FieldParameters,
 }
 
 struct TreeBehavior<'a> {
@@ -136,6 +137,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
             Pane::Tools => "Tools".to_string().into(),
             Pane::IDE(_) => "IDE".to_string().into(),
             Pane::Vello(_) => "Vello window".to_string().into(),
+            Pane::FieldParameters => format!("{}", self.kumir_state.selected_mode).into(),
         }
     }
     fn pane_ui(
@@ -160,6 +162,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                         Pane::Tools => "Tools".to_string(),
                         Pane::IDE(_) => "IDE".to_string(),
                         Pane::Vello(_) => "Vello".to_string(),
+                        Pane::FieldParameters => format!("{}", self.kumir_state.selected_mode),
                     }
                 )); // Title text
                 ui.allocate_space(ui.available_size()); // Fill remaining space
@@ -255,8 +258,53 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                     // for event in &input.events {
                     //     info!("Event: {:?}", event);
                     // }
-                })
+                });
             }
+            Pane::FieldParameters => match self.kumir_state.selected_mode {
+                Modes::Robot => {
+                    let mut rob = self.kumir_state.modes.robot.lock().unwrap();
+                    ui.label(format!("Количество строк: {}", rob.get_height()));
+                    ui.horizontal(|ui| {
+                        if ui.button("Добавить строку сверху").clicked() {
+                            rob.add_row_from_up();
+                        }
+
+                        if ui.button("Добавить строку снизу").clicked() {
+                            rob.add_row_from_down();
+                        }
+                    });
+                    ui.horizontal(|ui| {
+                        if ui.button("Удалить строку сверху").clicked() {
+                            rob.remove_row_from_up();
+                        }
+
+                        if ui.button("Удалить строку снизу").clicked() {
+                            rob.remove_row_from_down();
+                        }
+                    });
+
+                    ui.label(format!("Количество столбцов: {}", rob.get_width()));
+                    ui.horizontal(|ui| {
+                        if ui.button("Добавить столбец слева").clicked() {
+                            rob.add_column_from_left();
+                        }
+
+                        if ui.button("Добавить столбец справа").clicked() {
+                            rob.add_column_from_right();
+                        }
+                    });
+                    ui.horizontal(|ui| {
+                        if ui.button("Удалить столбец слева").clicked() {
+                            rob.remove_column_from_left();
+                        }
+
+                        if ui.button("Удалить столбец справа").clicked() {
+                            rob.remove_column_from_right();
+                        }
+                    });
+                }
+                _ => (),
+            },
         }
         if title_bar_response.drag_started() {
             egui_tiles::UiResponse::DragStarted
@@ -284,6 +332,7 @@ fn create_tree(vello_options: Arc<Mutex<VelloWindowOptions>>) -> egui_tiles::Tre
         code: "fn main() {\n    println!(\"Hello, world!\");\n}".to_string(),
         lang: "Rust".to_string(),
     })));
+    tabs.push(tiles.insert_pane(Pane::FieldParameters));
 
     let root = tiles.insert_tab_tile(tabs);
 

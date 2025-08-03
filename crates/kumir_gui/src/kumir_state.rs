@@ -30,7 +30,7 @@ impl fmt::Display for Modes {
 }
 
 pub struct ModesStored {
-    robot: Arc<Mutex<Robot>>,
+    pub robot: Arc<Mutex<Robot>>,
 }
 
 pub struct KumirState {

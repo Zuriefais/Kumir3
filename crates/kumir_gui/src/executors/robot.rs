@@ -236,7 +236,193 @@ impl Robot {
         scene.append(&new_scene, Some(transform));
     }
 
+    pub fn change_offset_x(&mut self, o: f64) {
+        self.o += o;
+    }
+
+    pub fn change_offset_y(&mut self, i: f64) {
+        self.i += i;
+    }
+
+    pub fn change_offset(&mut self, o: f64, i: f64) {
+        self.change_offset_x(o);
+        self.change_offset_y(i);
+    }
+
+    pub fn change_scale(&mut self, delta_scale: f64) {
+        if 0.1 < self.scale + delta_scale && self.scale + delta_scale < 10.0 {
+            self.scale += delta_scale;
+        };
+    }
+
+    pub fn add_row_from_up(&mut self) {
+        for i in 0..=self.width {
+            self.vertical_borders[i].insert(0, i == 0 || i == self.width);
+        }
+
+        for i in 0..self.width {
+            self.horizontal_borders[i].insert(0, true);
+            self.horizontal_borders[i][1] = false;
+        }
+
+        for i in 0..self.width {
+            self.colored[i].insert(0, false);
+        }
+
+        self.height += 1;
+        self.y += 1;
+        self.i -= self.cell_size / 2.0;
+    }
+
+    pub fn remove_row_from_up(&mut self) {
+        if self.change_height(-1, true) {
+            for i in 0..=self.width {
+                self.vertical_borders[i].remove(0);
+            }
+
+            for i in 0..self.width {
+                self.horizontal_borders[i].remove(0);
+                self.horizontal_borders[i][0] = true;
+            }
+
+            for i in 0..self.width {
+                self.colored[i].remove(0);
+            }
+
+            self.y -= 1;
+
+            self.i += self.cell_size / 2.0;
+        }
+    }
+
+    pub fn add_row_from_down(&mut self) {
+        for i in 0..=self.width {
+            self.vertical_borders[i].push(i == 0 || i == self.width);
+        }
+
+        for i in 0..self.width {
+            self.horizontal_borders[i][self.height] = false;
+            self.horizontal_borders[i].push(true);
+        }
+
+        for i in 0..self.width {
+            self.colored[i].push(false);
+        }
+
+        self.height += 1;
+        self.i -= self.cell_size / 2.0;
+    }
+
+    pub fn remove_row_from_down(&mut self) {
+        if self.change_height(-1, false) {
+            for i in 0..=self.width {
+                self.vertical_borders[i].pop();
+            }
+
+            for i in 0..self.width {
+                self.horizontal_borders[i].pop();
+                self.horizontal_borders[i][self.height] = true;
+            }
+
+            for i in 0..self.width {
+                self.colored[i].pop();
+            }
+
+            self.i += self.cell_size / 2.0;
+        }
+    }
+
+    pub fn add_column_from_left(&mut self) {
+        let vertical_borders = vec![true; self.height];
+        self.vertical_borders[0] = vec![false; self.height];
+        self.vertical_borders.insert(0, vertical_borders);
+
+        let mut horizontal_borders = vec![false; self.height + 1];
+        horizontal_borders[0] = true;
+        horizontal_borders[self.height] = true;
+        self.horizontal_borders.insert(0, horizontal_borders);
+
+        let colored = vec![false; self.height];
+        self.colored.insert(0, colored);
+
+        self.width += 1;
+        self.x += 1;
+
+        self.o -= self.cell_size / 2.0;
+    }
+
+    pub fn remove_column_from_left(&mut self) {
+        if self.change_width(-1, true) {
+            self.vertical_borders.remove(0);
+            self.vertical_borders[0] = vec![true; self.height];
+            self.horizontal_borders.remove(0);
+            self.colored.remove(0);
+
+            self.x -= 1;
+            self.o += self.cell_size / 2.0;
+        }
+    }
+
+    pub fn add_column_from_right(&mut self) {
+        let vertical_borders = vec![true; self.height];
+        self.vertical_borders[self.width] = vec![false; self.height];
+        self.vertical_borders.push(vertical_borders);
+
+        let mut horizontal_borders = vec![false; self.height + 1];
+        horizontal_borders[0] = true;
+        horizontal_borders[self.height] = true;
+        self.horizontal_borders.push(horizontal_borders);
+
+        let colored = vec![false; self.height];
+        self.colored.push(colored);
+
+        self.width += 1;
+        self.o -= self.cell_size / 2.0;
+    }
+
+    pub fn remove_column_from_right(&mut self) {
+        if self.change_width(-1, false) {
+            self.vertical_borders.pop();
+            self.vertical_borders[self.width] = vec![true; self.height];
+            self.horizontal_borders.pop();
+            self.colored.pop();
+
+            self.o += self.cell_size / 2.0;
+        }
+    }
+
     // Robot API
+    pub fn get_height(&self) -> usize {
+        self.height
+    }
+
+    pub fn change_height(&mut self, delta_height: i64, from_up: bool) -> bool {
+        let new_height = self.height as i64 + delta_height;
+
+        if new_height >= 1 && (self.y as i64 - 1 >= 0 || !from_up) {
+            self.height = new_height as usize;
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn get_width(&self) -> usize {
+        self.width
+    }
+
+    pub fn change_width(&mut self, delta_width: i64, from_left: bool) -> bool {
+        let new_width = self.width as i64 + delta_width;
+
+        if new_width >= 1 && (self.x as i64 - 1 >= 0 || !from_left) {
+            self.width = new_width as usize;
+            true
+        } else {
+            false
+        }
+    }
+
+    // Robot API for Kumir
     // Only god can save my ass from using this shit.
 
     fn move_robot(&mut self, x: i64, y: i64) {
@@ -303,22 +489,5 @@ impl Robot {
 
     pub fn from_right(&self) -> bool {
         self.vertical_borders[self.x + 1][self.y]
-    }
-
-    pub fn change_offset_x(&mut self, o: f64) {
-        self.o += o;
-    }
-
-    pub fn change_offset_y(&mut self, i: f64) {
-        self.i += i;
-    }
-
-    pub fn change_offset(&mut self, o: f64, i: f64) {
-        self.change_offset_x(o);
-        self.change_offset_y(i);
-    }
-
-    pub fn change_scale(&mut self, delta_scale: f64) {
-        self.scale += delta_scale;
     }
 }
