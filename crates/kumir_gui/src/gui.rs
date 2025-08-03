@@ -6,6 +6,8 @@ use egui::{Context, TextureId, load::SizedTexture};
 use egui::{Response, Ui, Widget};
 use egui_extras::syntax_highlighting::highlight;
 
+use crate::executors::robot::{DeletingColumns, DeletingRows, RobotEditingState};
+
 use log::info;
 
 #[derive(Default)]
@@ -104,8 +106,13 @@ impl KumirGui {
         //     });
 
         egui::CentralPanel::default().show(&self.egui_context, |ui| {
+            let robot_edit_state = RobotEditingState {
+                deleting_rows_mode: DeletingRows::FromDown,
+                deleting_columns_mode: DeletingColumns::FromRight,
+            };
             let mut behavior = TreeBehavior {
                 kumir_state: &mut self.kumir_state,
+                robot_edit_state: robot_edit_state,
             };
             self.tree.ui(&mut behavior, ui);
         });
@@ -127,6 +134,7 @@ enum Pane {
 
 struct TreeBehavior<'a> {
     kumir_state: &'a mut KumirState,
+    robot_edit_state: RobotEditingState,
 }
 
 impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
@@ -263,44 +271,63 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
             Pane::FieldParameters => match self.kumir_state.selected_mode {
                 Modes::Robot => {
                     let mut rob = self.kumir_state.modes.robot.lock().unwrap();
-                    ui.label(format!("Количество строк: {}", rob.get_height()));
-                    ui.horizontal(|ui| {
-                        if ui.button("Добавить строку сверху").clicked() {
-                            rob.add_row_from_up();
-                        }
-
-                        if ui.button("Добавить строку снизу").clicked() {
-                            rob.add_row_from_down();
-                        }
+                    ui.group(|ui| {
+                        ui.horizontal(|ui| {
+                            if ui.button("-").clicked() {
+                                match self.robot_edit_state.deleting_columns_mode {
+                                    DeletingColumns::FromLeft => rob.remove_column_from_left(),
+                                    DeletingColumns::FromRight => rob.remove_column_from_right(),
+                                }
+                            }
+                            ui.label(format!("{}", rob.get_width()));
+                            if ui.button("+").clicked() {
+                                match self.robot_edit_state.deleting_columns_mode {
+                                    DeletingColumns::FromLeft => rob.add_column_from_left(),
+                                    DeletingColumns::FromRight => rob.add_column_from_right(),
+                                }
+                            }
+                        });
+                        ui.horizontal(|ui| {
+                            ui.selectable_value(
+                                &mut self.robot_edit_state.deleting_columns_mode,
+                                DeletingColumns::FromRight,
+                                "Справа",
+                            );
+                            ui.selectable_value(
+                                &mut self.robot_edit_state.deleting_columns_mode,
+                                DeletingColumns::FromLeft,
+                                "Слева",
+                            );
+                        });
                     });
-                    ui.horizontal(|ui| {
-                        if ui.button("Удалить строку сверху").clicked() {
-                            rob.remove_row_from_up();
-                        }
-
-                        if ui.button("Удалить строку снизу").clicked() {
-                            rob.remove_row_from_down();
-                        }
-                    });
-
-                    ui.label(format!("Количество столбцов: {}", rob.get_width()));
-                    ui.horizontal(|ui| {
-                        if ui.button("Добавить столбец слева").clicked() {
-                            rob.add_column_from_left();
-                        }
-
-                        if ui.button("Добавить столбец справа").clicked() {
-                            rob.add_column_from_right();
-                        }
-                    });
-                    ui.horizontal(|ui| {
-                        if ui.button("Удалить столбец слева").clicked() {
-                            rob.remove_column_from_left();
-                        }
-
-                        if ui.button("Удалить столбец справа").clicked() {
-                            rob.remove_column_from_right();
-                        }
+                    ui.group(|ui| {
+                        ui.horizontal(|ui| {
+                            if ui.button("-").clicked() {
+                                match self.robot_edit_state.deleting_rows_mode {
+                                    DeletingRows::FromDown => rob.remove_row_from_down(),
+                                    DeletingRows::FromUp => rob.remove_row_from_up(),
+                                }
+                            }
+                            ui.label(format!("{}", rob.get_height()));
+                            if ui.button("+").clicked() {
+                                match self.robot_edit_state.deleting_rows_mode {
+                                    DeletingRows::FromDown => rob.add_row_from_down(),
+                                    DeletingRows::FromUp => rob.add_row_from_up(),
+                                }
+                            }
+                        });
+                        ui.horizontal(|ui| {
+                            ui.selectable_value(
+                                &mut self.robot_edit_state.deleting_rows_mode,
+                                DeletingRows::FromDown,
+                                "Снизу",
+                            );
+                            ui.selectable_value(
+                                &mut self.robot_edit_state.deleting_rows_mode,
+                                DeletingRows::FromUp,
+                                "Сверху",
+                            );
+                        });
                     });
                 }
                 _ => (),
