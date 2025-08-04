@@ -1,12 +1,12 @@
 use std::sync::{Arc, Mutex};
 
-use crate::kumir_state::{KumirState, Modes};
+use crate::kumir_state::{EditingStates, KumirState, Modes, ModesStored};
 use egui::Vec2;
 use egui::{Context, TextureId, load::SizedTexture};
 use egui::{Response, Ui, Widget};
 use egui_extras::syntax_highlighting::highlight;
 
-use crate::executors::robot::{DeletingColumns, DeletingRows, RobotEditingState};
+use crate::executors::gui::robot_gui::RobotWidget;
 
 use log::info;
 
@@ -106,16 +106,22 @@ impl KumirGui {
         //     });
 
         egui::CentralPanel::default().show(&self.egui_context, |ui| {
-            let robot_edit_state = RobotEditingState {
-                deleting_rows_mode: DeletingRows::FromDown,
-                deleting_columns_mode: DeletingColumns::FromRight,
-            };
             let mut behavior = TreeBehavior {
                 kumir_state: &mut self.kumir_state,
-                robot_edit_state: robot_edit_state,
             };
             self.tree.ui(&mut behavior, ui);
         });
+
+        egui::Window::new("Изменить поле")
+            .resizable([true, false])
+            .show(&self.egui_context, |ui| {
+                match self.kumir_state.selected_mode {
+                    Modes::Robot => ui.add(RobotWidget {
+                        kumir_state: &mut self.kumir_state,
+                    }),
+                    _ => ui.label("None"),
+                }
+            });
     }
 
     pub fn add_shapes_to_scene(&mut self) {
@@ -129,12 +135,10 @@ enum Pane {
     Tools,
     IDE(IDEWindowOptions),
     Vello(Arc<Mutex<VelloWindowOptions>>),
-    FieldParameters,
 }
 
 struct TreeBehavior<'a> {
     kumir_state: &'a mut KumirState,
-    robot_edit_state: RobotEditingState,
 }
 
 impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
@@ -145,7 +149,6 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
             Pane::Tools => "Tools".to_string().into(),
             Pane::IDE(_) => "IDE".to_string().into(),
             Pane::Vello(_) => "Vello window".to_string().into(),
-            Pane::FieldParameters => format!("{}", self.kumir_state.selected_mode).into(),
         }
     }
     fn pane_ui(
@@ -170,7 +173,6 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                         Pane::Tools => "Tools".to_string(),
                         Pane::IDE(_) => "IDE".to_string(),
                         Pane::Vello(_) => "Vello".to_string(),
-                        Pane::FieldParameters => format!("{}", self.kumir_state.selected_mode),
                     }
                 )); // Title text
                 ui.allocate_space(ui.available_size()); // Fill remaining space
@@ -268,70 +270,6 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                     // }
                 });
             }
-            Pane::FieldParameters => match self.kumir_state.selected_mode {
-                Modes::Robot => {
-                    let mut rob = self.kumir_state.modes.robot.lock().unwrap();
-                    ui.group(|ui| {
-                        ui.horizontal(|ui| {
-                            if ui.button("-").clicked() {
-                                match self.robot_edit_state.deleting_columns_mode {
-                                    DeletingColumns::FromLeft => rob.remove_column_from_left(),
-                                    DeletingColumns::FromRight => rob.remove_column_from_right(),
-                                }
-                            }
-                            ui.label(format!("{}", rob.get_width()));
-                            if ui.button("+").clicked() {
-                                match self.robot_edit_state.deleting_columns_mode {
-                                    DeletingColumns::FromLeft => rob.add_column_from_left(),
-                                    DeletingColumns::FromRight => rob.add_column_from_right(),
-                                }
-                            }
-                        });
-                        ui.horizontal(|ui| {
-                            ui.selectable_value(
-                                &mut self.robot_edit_state.deleting_columns_mode,
-                                DeletingColumns::FromRight,
-                                "Справа",
-                            );
-                            ui.selectable_value(
-                                &mut self.robot_edit_state.deleting_columns_mode,
-                                DeletingColumns::FromLeft,
-                                "Слева",
-                            );
-                        });
-                    });
-                    ui.group(|ui| {
-                        ui.horizontal(|ui| {
-                            if ui.button("-").clicked() {
-                                match self.robot_edit_state.deleting_rows_mode {
-                                    DeletingRows::FromDown => rob.remove_row_from_down(),
-                                    DeletingRows::FromUp => rob.remove_row_from_up(),
-                                }
-                            }
-                            ui.label(format!("{}", rob.get_height()));
-                            if ui.button("+").clicked() {
-                                match self.robot_edit_state.deleting_rows_mode {
-                                    DeletingRows::FromDown => rob.add_row_from_down(),
-                                    DeletingRows::FromUp => rob.add_row_from_up(),
-                                }
-                            }
-                        });
-                        ui.horizontal(|ui| {
-                            ui.selectable_value(
-                                &mut self.robot_edit_state.deleting_rows_mode,
-                                DeletingRows::FromDown,
-                                "Снизу",
-                            );
-                            ui.selectable_value(
-                                &mut self.robot_edit_state.deleting_rows_mode,
-                                DeletingRows::FromUp,
-                                "Сверху",
-                            );
-                        });
-                    });
-                }
-                _ => (),
-            },
         }
         if title_bar_response.drag_started() {
             egui_tiles::UiResponse::DragStarted
@@ -359,7 +297,6 @@ fn create_tree(vello_options: Arc<Mutex<VelloWindowOptions>>) -> egui_tiles::Tre
         code: "fn main() {\n    println!(\"Hello, world!\");\n}".to_string(),
         lang: "Rust".to_string(),
     })));
-    tabs.push(tiles.insert_pane(Pane::FieldParameters));
 
     let root = tiles.insert_tab_tile(tabs);
 

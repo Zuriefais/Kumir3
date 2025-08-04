@@ -1,4 +1,4 @@
-use crate::executors::robot::Robot;
+use crate::executors::robot::{ColumnsMode, Robot, RobotEditingState, RowsMode};
 use log::info;
 use std::fmt;
 use std::sync::{Arc, Mutex};
@@ -33,12 +33,17 @@ pub struct ModesStored {
     pub robot: Arc<Mutex<Robot>>,
 }
 
+pub struct EditingStates {
+    pub robot: RobotEditingState,
+}
+
 pub struct KumirState {
-    scene: Arc<Mutex<Scene>>,
-    width: u32,
-    height: u32,
+    pub scene: Arc<Mutex<Scene>>,
+    pub width: u32,
+    pub height: u32,
     pub selected_mode: Modes,
     pub modes: ModesStored,
+    pub editing_states: EditingStates,
 }
 
 impl KumirState {
@@ -50,6 +55,12 @@ impl KumirState {
             selected_mode: Modes::None,
             modes: ModesStored {
                 robot: Arc::new(Mutex::new(Robot::new(9, 9, 100.0))),
+            },
+            editing_states: EditingStates {
+                robot: RobotEditingState {
+                    deleting_rows_mode: RowsMode::FromDown,
+                    deleting_columns_mode: ColumnsMode::FromRight,
+                },
             },
         }
     }

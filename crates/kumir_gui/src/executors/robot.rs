@@ -4,21 +4,22 @@ use vello::Scene;
 use vello::kurbo::{Affine, Line, Point, Rect, Stroke};
 use vello::peniko::Color;
 
-#[derive(PartialEq)]
-pub enum DeletingRows {
+#[derive(PartialEq, Copy, Clone)]
+pub enum RowsMode {
     FromUp,
     FromDown,
 }
 
-#[derive(PartialEq)]
-pub enum DeletingColumns {
+#[derive(PartialEq, Copy, Clone)]
+pub enum ColumnsMode {
     FromLeft,
     FromRight,
 }
 
+#[derive(PartialEq, Copy, Clone)]
 pub struct RobotEditingState {
-    pub deleting_rows_mode: DeletingRows,
-    pub deleting_columns_mode: DeletingColumns,
+    pub deleting_rows_mode: RowsMode,
+    pub deleting_columns_mode: ColumnsMode,
 }
 
 pub struct Cell {

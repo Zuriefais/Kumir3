@@ -1,6 +1,7 @@
 use crate::executors::robot::Robot;
 use vello::Scene;
 
+pub mod gui;
 pub mod robot;
 
 // pub fn add_shapes_to_scene(scene: &mut Scene, width: u32, height: u32) {
