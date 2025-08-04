@@ -254,6 +254,10 @@ impl Robot {
         }
     }
 
+    pub fn get_scale(&self) -> f64 {
+        self.scale
+    }
+
     pub fn add_row_from_up(&mut self) {
         #[cfg(unix)]
         tracy_full::zone!("Add Row From Up", tracy_full::color::Color::CYAN, true);

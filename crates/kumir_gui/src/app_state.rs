@@ -1,7 +1,8 @@
 use crate::egui_tools::EguiRenderer;
 use crate::gruvbox_egui::gruvbox_dark_theme;
-use crate::gui::{KumirGui, VelloWindowOptions};
+use crate::gui::KumirGui;
 use crate::kumir_state::KumirState;
+use crate::widgets::panes::VelloWindowOptions;
 use egui_wgpu::wgpu::SurfaceError;
 use egui_wgpu::{ScreenDescriptor, wgpu};
 use log::info;
