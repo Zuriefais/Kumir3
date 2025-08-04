@@ -37,7 +37,7 @@ web-sys = { version = "0.3.77", features = [
 ] }
 
 [target.'cfg(unix)'.dependencies]
-tracy-client = "0.18.1"
+tracy_full = {version = "1.12.0", features = ["enable", "wgpu"]}
 
 [profile.dev]
 opt-level = 0
