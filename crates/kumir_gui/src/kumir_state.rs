@@ -111,4 +111,11 @@ impl KumirState {
             _ => (),
         }
     }
+
+    pub fn get_scale(&self) -> f64 {
+        match self.selected_mode {
+            Modes::Robot => self.modes.robot.lock().unwrap().get_scale(),
+            _ => 1.0,
+        }
+    }
 }

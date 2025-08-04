@@ -273,6 +273,10 @@ impl Robot {
         };
     }
 
+    pub fn get_scale(&self) -> f64 {
+        self.scale
+    }
+
     pub fn add_row_from_up(&mut self) {
         for i in 0..=self.width {
             self.vertical_borders[i].insert(0, i == 0 || i == self.width);
