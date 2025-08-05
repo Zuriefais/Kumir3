@@ -5,6 +5,7 @@ use crate::widgets::panes::{
     IDEWindowOptions, Pane, TreeBehavior, VelloWindowOptions, create_tree,
 };
 use crate::widgets::robot_gui::RobotWidget;
+use crate::widgets::usage_diagnostics::UsageDiagnostics;
 use egui::Vec2;
 use egui::{Context, TextureId, load::SizedTexture};
 use egui::{Response, Sense, Ui, Widget};
@@ -33,6 +34,7 @@ impl KumirGui {
     pub fn render_gui(&mut self) {
         egui::TopBottomPanel::top("tools").show(&self.egui_context, |ui| {
             ui.horizontal(|ui| {
+                UsageDiagnostics {}.ui(ui);
                 if ui
                     .add(egui::Button::new("Запустить").frame(false))
                     .clicked()
