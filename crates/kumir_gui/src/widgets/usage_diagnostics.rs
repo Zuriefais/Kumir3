@@ -1,5 +1,6 @@
 use egui::{Context, Ui, Widget};
-use std::time::Instant;
+
+use web_time::Instant;
 
 pub struct UsageDiagnostics;
 
