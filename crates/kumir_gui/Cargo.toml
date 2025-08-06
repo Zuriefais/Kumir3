@@ -11,6 +11,8 @@ egui_extras = { version = "0.31.1", features = ["syntect"] }
 egui-wgpu = { version = "0.31.1", features = ["winit"] }
 egui-winit = { version = "0.31.1", default-features = false }
 egui_tiles = "0.12.0"
+egui_console = "0.2.0"
+rustpython = "*"
 
 winit = "0.30.9"
 
