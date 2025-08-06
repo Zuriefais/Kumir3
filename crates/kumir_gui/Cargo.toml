@@ -10,18 +10,15 @@ egui_extras = { version = "0.31.1", features = ["syntect"] }
 egui-wgpu = { version = "0.31.1", features = ["winit"] }
 egui-winit = { version = "0.31.1", default-features = false }
 egui_tiles = "0.12.0"
-<<<<<<< HEAD
 egui_console = "0.2.0"
 rustpython = "*"
 
-=======
->>>>>>> master
 winit = "0.30.9"
 wasm_thread = "*"
 log = { workspace = true }
 vello = "0.5.0"
 anyhow = "1.0.98"
-web-time = {version = "1.1.0"}
+web-time = { version = "1.1.0" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11.8"
@@ -40,7 +37,7 @@ web-sys = { version = "0.3.77", features = [
 ] }
 
 [target.'cfg(unix)'.dependencies]
-tracy_full = {version = "1.12.0", features = ["enable", "wgpu"]}
+tracy_full = { version = "1.12.0", features = ["enable", "wgpu"] }
 
 [profile.dev]
 opt-level = 0
