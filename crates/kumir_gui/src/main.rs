@@ -8,8 +8,6 @@ mod kumir_state;
 mod widgets;
 
 use log::info;
-#[cfg(unix)]
-use tracy_client::Client;
 
 use winit::event_loop::{ControlFlow, EventLoop};
 
@@ -20,7 +18,7 @@ pub fn main() {
     }
     #[cfg(target_arch = "wasm32")]
     {
-        console_log::init_with_level(Level::Trace);
+        console_log::init_with_level(log::Level::Trace);
     }
     info!("Starting App");
     #[cfg(not(target_arch = "wasm32"))]
@@ -34,8 +32,6 @@ pub fn main() {
 }
 
 async fn run() {
-    #[cfg(unix)]
-    Client::start();
     let event_loop = EventLoop::with_user_event().build().unwrap();
 
     event_loop.set_control_flow(ControlFlow::Poll);

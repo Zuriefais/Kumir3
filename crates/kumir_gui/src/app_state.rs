@@ -167,14 +167,20 @@ impl AppState {
     }
 
     pub fn handle_redraw(&mut self) {
+        #[cfg(unix)]
+        tracy_full::zone!("Frame"); // Zone for the entire frame
+
         let window = &self.window;
         let width = self.surface_config.width;
         let height = self.surface_config.height;
         let mut vello_window_changed = false;
+
+        #[cfg(unix)]
+        tracy_full::zone!("Vello Setup"); // Zone for Vello setup
         if let Ok(mut vello_size) = self.vello_window_options.lock()
             && vello_size.changed
             && vello_size.height != 0
-            && vello_size.height != 0
+            && vello_size.width != 0
         {
             vello_window_changed = true;
             vello_size.changed = false;
@@ -186,8 +192,6 @@ impl AppState {
                 create_vello_texture(&self.device, vello_size.width, vello_size.height);
         }
         self.vello_scene.lock().unwrap().reset();
-
-        // Re-add the objects to draw to the scene.
         self.kumir_gui.add_shapes_to_scene();
 
         let screen_descriptor = ScreenDescriptor {
@@ -196,10 +200,8 @@ impl AppState {
         };
 
         let surface_texture = self.surface.get_current_texture();
-
         match surface_texture {
             Err(SurfaceError::Outdated) => {
-                // Ignoring outdated to allow resizing and minimization
                 info!("wgpu surface outdated");
                 return;
             }
@@ -209,9 +211,7 @@ impl AppState {
             }
             Ok(_) => {}
         };
-
         let surface_texture = surface_texture.unwrap();
-
         let surface_view = surface_texture
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
@@ -224,6 +224,7 @@ impl AppState {
                 ),
                 ..Default::default()
             });
+
         if vello_window_changed && let Ok(mut vello_options) = self.vello_window_options.lock() {
             vello_options.texture = self
                 .egui_renderer
@@ -234,37 +235,43 @@ impl AppState {
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
-        {
-            self.vello_renderer
-                .render_to_texture(
-                    &self.device,
-                    &self.queue,
-                    &self.vello_scene.lock().unwrap(),
-                    &vello_view,
-                    &vello::RenderParams {
-                        base_color: palette::css::BLACK, // Background color
-                        width,
-                        height,
-                        antialiasing_method: AaConfig::Msaa16,
-                    },
-                )
-                .expect("failed to render to surface");
-
-            self.egui_renderer.begin_frame(window);
-            self.kumir_gui.render_gui();
-            self.egui_renderer.end_frame_and_draw(
+        #[cfg(unix)]
+        tracy_full::zone!("Vello Render"); // Zone for Vello rendering
+        self.vello_renderer
+            .render_to_texture(
                 &self.device,
                 &self.queue,
-                &mut encoder,
-                window,
-                &surface_view,
-                screen_descriptor,
-            );
-        }
+                &self.vello_scene.lock().unwrap(),
+                &vello_view,
+                &vello::RenderParams {
+                    base_color: palette::css::BLACK,
+                    width,
+                    height,
+                    antialiasing_method: AaConfig::Msaa16,
+                },
+            )
+            .expect("failed to render to surface");
 
+        #[cfg(unix)]
+        tracy_full::zone!("Egui Render"); // Zone for eGUI rendering
+        self.egui_renderer.begin_frame(window);
+        self.kumir_gui.render_gui();
+        self.egui_renderer.end_frame_and_draw(
+            &self.device,
+            &self.queue,
+            &mut encoder,
+            window,
+            &surface_view,
+            screen_descriptor,
+        );
+
+        #[cfg(unix)]
+        tracy_full::zone!("Queue Submit"); // Zone for queue submission
         self.queue.submit(Some(encoder.finish()));
         surface_texture.present();
         window.request_redraw();
+        #[cfg(unix)]
+        tracy_full::frame!();
     }
 
     pub fn event(&mut self, event: &WindowEvent) {
