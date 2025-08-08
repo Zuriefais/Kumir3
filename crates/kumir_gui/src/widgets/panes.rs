@@ -1,4 +1,6 @@
-use crate::kumir_state::KumirState;
+use crate::kumir_state::{KumirState, Modes};
+use crate::widgets::robot_gui::RobotWidget;
+use egui::Align2;
 use egui::{Sense, TextureId, Vec2, load::SizedTexture};
 use egui_extras::syntax_highlighting::highlight;
 use std::fmt;
@@ -140,6 +142,19 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                 });
             }
             Pane::Vello(vello_options) => {
+                egui::Window::new("Изменить поле")
+                    .resizable([false, false])
+                    .constrain_to(ui.available_rect_before_wrap())
+                    .anchor(Align2::RIGHT_TOP, [-10.0, 10.0])
+                    .show(&ui.ctx().clone(), |ui| {
+                        match self.kumir_state.selected_mode {
+                            Modes::Robot => ui.add(RobotWidget {
+                                kumir_state: &mut self.kumir_state,
+                            }),
+                            _ => ui.label("None"),
+                        }
+                    });
+
                 let available_size = ui.available_size() * ui.ctx().pixels_per_point();
                 if let Ok(mut vello_options) = vello_options.lock() {
                     if vello_options.width != available_size.x as u32

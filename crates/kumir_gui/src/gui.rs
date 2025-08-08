@@ -4,7 +4,6 @@ use crate::kumir_state::{EditingStates, KumirState, Modes, ModesStored};
 use crate::widgets::panes::{
     IDEWindowOptions, Pane, TreeBehavior, VelloWindowOptions, create_tree,
 };
-use crate::widgets::robot_gui::RobotWidget;
 use crate::widgets::usage_diagnostics::UsageDiagnostics;
 use egui::Vec2;
 use egui::{Context, TextureId, load::SizedTexture};
@@ -101,18 +100,6 @@ impl KumirGui {
             };
             self.tree.ui(&mut behavior, ui);
         });
-
-        egui::Window::new("Изменить поле")
-            .resizable([true, false])
-            .default_pos([15.0, 00.0])
-            .show(&self.egui_context, |ui| {
-                match self.kumir_state.selected_mode {
-                    Modes::Robot => ui.add(RobotWidget {
-                        kumir_state: &mut self.kumir_state,
-                    }),
-                    _ => ui.label("None"),
-                }
-            });
     }
 
     pub fn add_shapes_to_scene(&mut self) {

@@ -53,8 +53,8 @@ pub struct Robot {
 
 impl Robot {
     pub fn new(width: usize, height: usize, cell_size: f64) -> Self {
-        #[cfg(unix)]
-        tracy_full::zone!("Robot Initialization", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Robot Initialization", tracy_full::color::Color::CYAN, true);
         Self {
             width,
             height,
@@ -92,8 +92,8 @@ impl Robot {
     }
 
     pub fn clear_field(&self, scene: &mut Scene) {
-        #[cfg(unix)]
-        tracy_full::zone!("Vello Clear Field", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Vello Clear Field", tracy_full::color::Color::CYAN, true);
         scene.fill(
             vello::peniko::Fill::NonZero,
             Affine::IDENTITY,
@@ -134,8 +134,8 @@ impl Robot {
     }
 
     pub fn draw_grid(&self, scene: &mut Scene) {
-        #[cfg(unix)]
-        tracy_full::zone!("Vello Draw Grid", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Vello Draw Grid", tracy_full::color::Color::CYAN, true);
         for x in 0..=self.width {
             for y in 0..=self.height {
                 let p1 = Point::new(
@@ -187,8 +187,8 @@ impl Robot {
     }
 
     pub fn draw_robot(&self, scene: &mut Scene) {
-        #[cfg(unix)]
-        tracy_full::zone!("Vello Draw Robot", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Vello Draw Robot", tracy_full::color::Color::CYAN, true);
         let stroke = Stroke::new(0.5);
         let center_x = self.cell_size / 2.0 + self.cell_size * (self.x as f64) + self.o;
         let center_y = self.cell_size / 2.0 + self.cell_size * (self.y as f64) + self.i;
@@ -212,8 +212,8 @@ impl Robot {
     }
 
     pub fn draw_field(&self, scene: &mut Scene) {
-        #[cfg(unix)]
-        tracy_full::zone!("Vello Draw Field", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Vello Draw Field", tracy_full::color::Color::CYAN, true);
         let mut new_scene = Scene::new();
         self.clear_field(&mut new_scene);
         self.fill_cells(&mut new_scene);
@@ -222,36 +222,39 @@ impl Robot {
 
         let center_x = self.width as f64 / 2.0 * self.cell_size + self.o;
         let center_y = self.height as f64 / 2.0 * self.cell_size + self.i;
+        info!("self.o: {} self.i: {}", self.o, self.i);
+        info!("center_x: {} center_y: {}", center_x, center_y);
         let transform = Affine::translate((center_x, center_y)) * Affine::scale(self.scale);
 
         scene.append(&new_scene, Some(transform));
     }
 
     pub fn change_offset_x(&mut self, o: f64) {
-        #[cfg(unix)]
-        tracy_full::zone!("Change Offset X", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Change Offset X", tracy_full::color::Color::CYAN, true);
         self.o += o;
     }
 
     pub fn change_offset_y(&mut self, i: f64) {
-        #[cfg(unix)]
-        tracy_full::zone!("Change Offset Y", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Change Offset Y", tracy_full::color::Color::CYAN, true);
         self.i += i;
     }
 
     pub fn change_offset(&mut self, o: f64, i: f64) {
-        #[cfg(unix)]
-        tracy_full::zone!("Change Offset", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Change Offset", tracy_full::color::Color::CYAN, true);
         self.change_offset_x(o);
         self.change_offset_y(i);
     }
 
     pub fn change_scale(&mut self, delta_scale: f64) {
-        #[cfg(unix)]
-        tracy_full::zone!("Change Scale", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Change Scale", tracy_full::color::Color::CYAN, true);
         if 0.1 < self.scale + delta_scale && self.scale + delta_scale < 10.0 {
             self.scale += delta_scale;
         }
+        info!("Scale: {}", self.scale);
     }
 
     pub fn get_scale(&self) -> f64 {
@@ -259,8 +262,8 @@ impl Robot {
     }
 
     pub fn add_row_from_up(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Add Row From Up", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Add Row From Up", tracy_full::color::Color::CYAN, true);
         for i in 0..=self.width {
             self.vertical_borders[i].insert(0, i == 0 || i == self.width);
         }
@@ -277,8 +280,8 @@ impl Robot {
     }
 
     pub fn remove_row_from_up(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Remove Row From Up", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Remove Row From Up", tracy_full::color::Color::CYAN, true);
         if self.change_height(-1, true) {
             for i in 0..=self.width {
                 self.vertical_borders[i].remove(0);
@@ -296,8 +299,8 @@ impl Robot {
     }
 
     pub fn add_row_from_down(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Add Row From Down", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Add Row From Down", tracy_full::color::Color::CYAN, true);
         for i in 0..=self.width {
             self.vertical_borders[i].push(i == 0 || i == self.width);
         }
@@ -313,8 +316,8 @@ impl Robot {
     }
 
     pub fn remove_row_from_down(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Remove Row From Down");
+        // #[cfg(unix)]
+        // tracy_full::zone!("Remove Row From Down");
         if self.change_height(-1, false) {
             for i in 0..=self.width {
                 self.vertical_borders[i].pop();
@@ -331,8 +334,8 @@ impl Robot {
     }
 
     pub fn add_column_from_left(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Add Column From Left", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Add Column From Left", tracy_full::color::Color::CYAN, true);
         let vertical_borders = vec![true; self.height];
         self.vertical_borders[0] = vec![false; self.height];
         self.vertical_borders.insert(0, vertical_borders);
@@ -348,12 +351,12 @@ impl Robot {
     }
 
     pub fn remove_column_from_left(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!(
-            "Remove Column From Left",
-            tracy_full::color::Color::CYAN,
-            true
-        );
+        // #[cfg(unix)]
+        // tracy_full::zone!(
+        //     "Remove Column From Left",
+        //     tracy_full::color::Color::CYAN,
+        //     true
+        // );
         if self.change_width(-1, true) {
             self.vertical_borders.remove(0);
             self.vertical_borders[0] = vec![true; self.height];
@@ -365,12 +368,12 @@ impl Robot {
     }
 
     pub fn add_column_from_right(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!(
-            "Add Column From Right",
-            tracy_full::color::Color::CYAN,
-            true
-        );
+        // #[cfg(unix)]
+        // tracy_full::zone!(
+        //     "Add Column From Right",
+        //     tracy_full::color::Color::CYAN,
+        //     true
+        // );
         let vertical_borders = vec![true; self.height];
         self.vertical_borders[self.width] = vec![false; self.height];
         self.vertical_borders.push(vertical_borders);
@@ -385,12 +388,12 @@ impl Robot {
     }
 
     pub fn remove_column_from_right(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!(
-            "Remove Column From Right",
-            tracy_full::color::Color::CYAN,
-            true
-        );
+        // #[cfg(unix)]
+        // tracy_full::zone!(
+        //     "Remove Column From Right",
+        //     tracy_full::color::Color::CYAN,
+        //     true
+        // );
         if self.change_width(-1, false) {
             self.vertical_borders.pop();
             self.vertical_borders[self.width] = vec![true; self.height];
@@ -405,8 +408,8 @@ impl Robot {
     }
 
     pub fn change_height(&mut self, delta_height: i64, from_up: bool) -> bool {
-        #[cfg(unix)]
-        tracy_full::zone!("Change Height", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Change Height", tracy_full::color::Color::CYAN, true);
         let new_height = self.height as i64 + delta_height;
         if new_height >= 1 && (self.y as i64 - 1 >= 0 || !from_up) {
             self.height = new_height as usize;
@@ -421,8 +424,8 @@ impl Robot {
     }
 
     pub fn change_width(&mut self, delta_width: i64, from_left: bool) -> bool {
-        #[cfg(unix)]
-        tracy_full::zone!("Change Width", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Change Width", tracy_full::color::Color::CYAN, true);
         let new_width = self.width as i64 + delta_width;
         if new_width >= 1 && (self.x as i64 - 1 >= 0 || !from_left) {
             self.width = new_width as usize;
@@ -433,8 +436,8 @@ impl Robot {
     }
 
     fn move_robot(&mut self, x: i64, y: i64) {
-        #[cfg(unix)]
-        tracy_full::zone!("Move Robot", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Move Robot", tracy_full::color::Color::CYAN, true);
         let new_x = self.x as i64 + x;
         let new_y = self.y as i64 + y;
         if new_x >= self.width as i64 {
@@ -454,63 +457,62 @@ impl Robot {
     }
 
     pub fn move_up(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Move Up", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Move Up", tracy_full::color::Color::CYAN, true);
         self.move_robot(0, -1);
     }
 
     pub fn move_down(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Move Down", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Move Down", tracy_full::color::Color::CYAN, true);
         self.move_robot(0, 1);
     }
 
     pub fn move_right(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Move Right", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Move Right", tracy_full::color::Color::CYAN, true);
         self.move_robot(1, 0);
-        info!("moved right");
     }
 
     pub fn move_left(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Move Left", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Move Left", tracy_full::color::Color::CYAN, true);
         self.move_robot(-1, 0);
     }
 
     pub fn color(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Color Cell", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Color Cell", tracy_full::color::Color::CYAN, true);
         self.colored[self.x][self.y] = true;
     }
 
     pub fn is_colored(&self) -> bool {
-        #[cfg(unix)]
-        tracy_full::zone!("Check Colored", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Check Colored", tracy_full::color::Color::CYAN, true);
         self.colored[self.x][self.y]
     }
 
     pub fn from_above(&self) -> bool {
-        #[cfg(unix)]
-        tracy_full::zone!("Check Above", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Check Above", tracy_full::color::Color::CYAN, true);
         self.horizontal_borders[self.x][self.y]
     }
 
     pub fn from_below(&self) -> bool {
-        #[cfg(unix)]
-        tracy_full::zone!("Check Below", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Check Below", tracy_full::color::Color::CYAN, true);
         self.horizontal_borders[self.x][self.y + 1]
     }
 
     pub fn from_left(&self) -> bool {
-        #[cfg(unix)]
-        tracy_full::zone!("Check Left", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Check Left", tracy_full::color::Color::CYAN, true);
         self.vertical_borders[self.x][self.y]
     }
 
     pub fn from_right(&self) -> bool {
-        #[cfg(unix)]
-        tracy_full::zone!("Check Right", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Check Right", tracy_full::color::Color::CYAN, true);
         self.vertical_borders[self.x + 1][self.y]
     }
 }
