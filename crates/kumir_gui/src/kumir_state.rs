@@ -1,9 +1,11 @@
 use crate::executors::robot::{ColumnsMode, Robot, RobotEditingState, RowsMode};
+use egui::Pos2;
 use log::info;
 use std::fmt;
 use std::sync::{Arc, Mutex};
 use std::time;
 use vello::Scene;
+use vello::peniko::Color;
 use wasm_thread as thread;
 
 #[derive(PartialEq, Eq, Clone)]
@@ -37,6 +39,11 @@ pub struct EditingStates {
     pub robot: RobotEditingState,
 }
 
+pub enum VisualMode {
+    Dark,
+    Light,
+}
+
 pub struct KumirState {
     pub scene: Arc<Mutex<Scene>>,
     pub width: f64,
@@ -44,6 +51,8 @@ pub struct KumirState {
     pub selected_mode: Modes,
     pub modes: ModesStored,
     pub editing_states: EditingStates,
+    pub visual_mode: VisualMode,
+    pub min_point: Pos2,
 }
 
 impl KumirState {
@@ -68,6 +77,8 @@ impl KumirState {
                     deleting_columns_mode: ColumnsMode::FromRight,
                 },
             },
+            visual_mode: VisualMode::Dark,
+            min_point: Pos2::new(10.0, 85.0),
         }
     }
 
@@ -113,6 +124,12 @@ impl KumirState {
         }
     }
 
+    pub fn update_min_point(&mut self, pos: Pos2) {
+        if self.min_point != pos {
+            self.min_point = pos;
+        }
+    }
+
     pub fn change_scale(&mut self, scale_delta: f64) {
         match self.selected_mode {
             Modes::Robot => self.modes.robot.lock().unwrap().change_scale(scale_delta),
@@ -124,6 +141,29 @@ impl KumirState {
         match self.selected_mode {
             Modes::Robot => self.modes.robot.lock().unwrap().get_scale(),
             _ => 1.0,
+        }
+    }
+
+    pub fn base_color(&self) -> Color {
+        match self.selected_mode {
+            Modes::Robot => self.modes.robot.lock().unwrap().base_color(),
+            _ => Color::from_rgb8(0, 0, 0),
+        }
+    }
+
+    pub fn hover(&self, pos: Option<Pos2>) {
+        if pos == None {
+            return;
+        }
+
+        match self.selected_mode {
+            Modes::Robot => self
+                .modes
+                .robot
+                .lock()
+                .unwrap()
+                .hovered((pos.unwrap() - self.min_point).to_pos2()),
+            _ => (),
         }
     }
 }

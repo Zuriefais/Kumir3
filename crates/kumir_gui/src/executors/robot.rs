@@ -1,9 +1,9 @@
-use egui::Widget;
+use egui::{Pos2, Widget};
 use log::info;
 use std::sync::{Arc, Mutex};
 use vello::Scene;
 use vello::kurbo::{Affine, Line, Point, Rect, Stroke};
-use vello::peniko::Color;
+use vello::peniko::{Color, color::palette::css};
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum RowsMode {
@@ -23,12 +23,13 @@ pub struct RobotEditingState {
     pub deleting_columns_mode: ColumnsMode,
 }
 
-pub struct Cell {
-    colored: bool,
-    left: bool,
-    right: bool,
-    up: bool,
-    down: bool,
+pub enum Hovered {
+    Cell { min: Point, max: Point },
+    LeftBorder { min: Point, max: Point },
+    RightBorder { min: Point, max: Point },
+    BorderAbove { min: Point, max: Point },
+    BorderUnder { min: Point, max: Point },
+    None,
 }
 
 pub struct Robot {
@@ -49,9 +50,11 @@ pub struct Robot {
     cell_color: Color,
     robot_color: Color,
     robot_border_color: Color,
+    hovered_color: Color,
     x: usize,
     y: usize,
     scale: f64,
+    hovered: Hovered,
 }
 
 impl Robot {
@@ -79,13 +82,15 @@ impl Robot {
                 borders
             },
             colored: vec![vec![false; height]; width],
-            fill_color: Color::from_rgb8(39, 143, 40),
+            // fill_color: Color::from_rgb8(39, 143, 40),
+            fill_color: css::DARK_GREEN,
             grid_color: Color::from_rgb8(200, 200, 16),
             stroke_active: Stroke::new(6.0),
             storke_inactive: Stroke::new(2.0),
             cell_color: Color::from_rgb8(147, 112, 219),
             robot_color: Color::from_rgb8(255, 255, 255),
             robot_border_color: Color::from_rgb8(0, 0, 0),
+            hovered_color: css::BLUE_VIOLET,
             x: 0,
             y: 0,
             o: 0f64,
@@ -93,6 +98,7 @@ impl Robot {
             center_x: center_x,
             center_y: center_y,
             scale: 1.0,
+            hovered: Hovered::None,
         }
     }
 
@@ -194,7 +200,6 @@ impl Robot {
     pub fn draw_robot(&self, scene: &mut Scene) {
         // #[cfg(unix)]
         // tracy_full::zone!("Vello Draw Robot", tracy_full::color::Color::CYAN, true);
-        let stroke = Stroke::new(0.5);
         let center_x = self.cell_size / 2.0 + self.cell_size * (self.x as f64) + self.o;
         let center_y = self.cell_size / 2.0 + self.cell_size * (self.y as f64) + self.i;
 
@@ -214,6 +219,31 @@ impl Robot {
             None,
             &robot_shape,
         );
+
+        scene.stroke(
+            &Stroke::new(2.0),
+            transform,
+            Color::from_rgb8(0, 0, 0),
+            None,
+            &robot_shape,
+        );
+    }
+
+    pub fn draw_hovered(&self, scene: &mut Scene) {
+        match self.hovered {
+            Hovered::None => (),
+            Hovered::Cell { min, max }
+            | Hovered::LeftBorder { min, max }
+            | Hovered::RightBorder { min, max }
+            | Hovered::BorderAbove { min, max }
+            | Hovered::BorderUnder { min, max } => scene.fill(
+                vello::peniko::Fill::NonZero,
+                Affine::IDENTITY,
+                self.hovered_color,
+                None,
+                &Rect::from_points(min, max),
+            ),
+        }
     }
 
     pub fn draw_field(&mut self, scene: &mut Scene) {
@@ -223,6 +253,7 @@ impl Robot {
         self.clear_field(&mut new_scene);
         self.fill_cells(&mut new_scene);
         self.draw_grid(&mut new_scene);
+        self.draw_hovered(&mut new_scene);
         self.draw_robot(&mut new_scene);
 
         // info!("center_x: {} center_y: {}", center_x, center_y);
@@ -242,6 +273,59 @@ impl Robot {
             "Updates centers and offsets: x: {} y: {}",
             self.center_x, self.center_y
         );
+    }
+
+    pub fn base_color(&self) -> Color {
+        self.fill_color
+    }
+
+    pub fn hovered(&mut self, pos: Pos2) {
+        let x = pos.x as f64;
+        let y = pos.y as f64;
+        let x_full = ((x - self.o) / self.cell_size).floor() * self.cell_size;
+        let y_full = ((y - self.i) / self.cell_size).floor() * self.cell_size;
+
+        let border_in_cell = self.cell_size / 20.0;
+
+        let pos_min = Point::new(x_full + border_in_cell, y_full + border_in_cell);
+        let pos_max = Point::new(
+            x_full + self.cell_size - border_in_cell,
+            y_full + self.cell_size - border_in_cell,
+        );
+
+        self.hovered = {
+            if pos_min.x < x && x < pos_max.x && pos_min.y < y && y < pos_max.y {
+                Hovered::Cell {
+                    min: pos_min,
+                    max: pos_max,
+                }
+            } else if x < pos_min.x {
+                Hovered::LeftBorder {
+                    min: Point::new(x_full - border_in_cell, y_full),
+                    max: Point::new(x_full + border_in_cell, y_full + self.cell_size),
+                }
+            } else if y < pos_min.y {
+                Hovered::BorderAbove {
+                    min: Point::new(x_full, y_full - border_in_cell),
+                    max: Point::new(x_full + self.cell_size, y_full + border_in_cell),
+                }
+            } else if x > pos_max.x {
+                Hovered::RightBorder {
+                    min: Point::new(x_full + self.cell_size - border_in_cell, y_full),
+                    max: Point::new(x_full + border_in_cell, y_full + self.cell_size),
+                }
+            } else if y > pos_max.y {
+                Hovered::BorderUnder {
+                    min: Point::new(x_full, y_full + self.cell_size - border_in_cell),
+                    max: Point::new(
+                        x_full + self.cell_size,
+                        y_full + self.cell_size + border_in_cell,
+                    ),
+                }
+            } else {
+                Hovered::None
+            }
+        };
     }
 
     pub fn change_scale(&mut self, delta_scale: f64) {

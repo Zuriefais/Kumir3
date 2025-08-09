@@ -141,7 +141,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                 });
             }
             Pane::Vello(vello_options) => {
-                egui::Window::new("Изменить поле")
+                egui::Window::new("Параметры окна и поля")
                     .resizable([false, false])
                     .constrain_to(ui.available_rect_before_wrap())
                     .anchor(Align2::RIGHT_TOP, [-10.0, 10.0])
@@ -150,7 +150,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                             Modes::Robot => ui.add(RobotWidget {
                                 kumir_state: &mut self.kumir_state,
                             }),
-                            _ => ui.label("None"),
+                            _ => ui.label("Режим не выбран"),
                         }
                     });
 
@@ -164,17 +164,18 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                         vello_options.changed = true;
                     }
 
-                    let response = ui
-                        .image(SizedTexture {
-                            id: vello_options.texture,
-                            size: egui::Vec2::new(available_size.x, available_size.y),
-                        })
-                        .interact(Sense::drag());
+                    let response = ui.image(SizedTexture {
+                        id: vello_options.texture,
+                        size: egui::Vec2::new(available_size.x, available_size.y),
+                    });
+
+                    self.kumir_state.update_min_point(response.rect.min);
 
                     if response.hovered() {
                         ui.input(|input: &'_ egui::InputState| {
                             let zoom_delta = input.zoom_delta();
                             self.kumir_state.change_scale(zoom_delta as f64 - 1.0);
+                            self.kumir_state.hover(input.pointer.hover_pos());
                             // println!("{:?}", input.pointer.hover_pos());
                         });
                     }

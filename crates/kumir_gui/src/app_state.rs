@@ -247,7 +247,7 @@ impl AppState {
                 &self.vello_scene.lock().unwrap(),
                 &vello_view,
                 &vello::RenderParams {
-                    base_color: palette::css::BLACK,
+                    base_color: self.kumir_gui.base_color(),
                     width,
                     height,
                     antialiasing_method: AaConfig::Msaa16,

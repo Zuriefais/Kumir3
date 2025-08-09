@@ -6,10 +6,12 @@ use crate::widgets::panes::{
 };
 use crate::widgets::usage_diagnostics::UsageDiagnostics;
 use egui::Vec2;
+use egui::color_picker::Alpha;
 use egui::{Context, TextureId, load::SizedTexture};
 use egui::{Response, Sense, Ui, Widget};
 
 use log::info;
+use vello::peniko::color::{AlphaColor, Srgb};
 
 pub struct KumirGui {
     egui_context: Context,
@@ -108,5 +110,9 @@ impl KumirGui {
 
     pub fn update_transform(&mut self, width: f64, height: f64) {
         self.kumir_state.update_transform(width, height);
+    }
+
+    pub fn base_color(&self) -> AlphaColor<Srgb> {
+        self.kumir_state.base_color()
     }
 }
