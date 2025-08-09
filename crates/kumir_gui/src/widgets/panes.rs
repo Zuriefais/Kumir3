@@ -1,7 +1,6 @@
 use crate::kumir_state::{KumirState, Modes};
 use crate::widgets::robot_gui::RobotWidget;
-use egui::Align2;
-use egui::{Sense, TextureId, Vec2, load::SizedTexture};
+use egui::{Align2, Pos2, Sense, TextureId, Vec2, load::SizedTexture};
 use egui_extras::syntax_highlighting::highlight;
 use std::fmt;
 use std::sync::{Arc, Mutex};
@@ -172,13 +171,11 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                         })
                         .interact(Sense::drag());
 
-                    let Vec2 { x, y } = response.drag_delta();
-                    self.kumir_state.change_offset(x, y);
-
                     if response.hovered() {
-                        ui.input(|input| {
+                        ui.input(|input: &'_ egui::InputState| {
                             let zoom_delta = input.zoom_delta();
                             self.kumir_state.change_scale(zoom_delta as f64 - 1.0);
+                            // println!("{:?}", input.pointer.hover_pos());
                         });
                     }
                 }

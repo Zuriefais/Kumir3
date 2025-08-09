@@ -134,14 +134,15 @@ impl AppState {
         )
         .expect("Couldn't create renderer");
         let vello_scene = Arc::new(Mutex::new(Scene::new()));
-        info!("App State created!!");
 
-        let kumir_state = KumirState::new(Arc::clone(&vello_scene), width, height);
+        let kumir_state = KumirState::new(Arc::clone(&vello_scene), 0f64, 0f64);
         let kumir_gui = KumirGui::new(
             egui_renderer.context(),
             kumir_state,
             vello_window_options.clone(),
         );
+
+        info!("App State created!!");
 
         Ok(Self {
             device,
@@ -189,6 +190,9 @@ impl AppState {
             );
             self.vello_texture =
                 create_vello_texture(&self.device, vello_size.width, vello_size.height);
+            self.kumir_gui
+                .update_transform(vello_size.width as f64, vello_size.height as f64);
+            info!("Updated transform");
         }
         self.vello_scene.lock().unwrap().reset();
         self.kumir_gui.add_shapes_to_scene();

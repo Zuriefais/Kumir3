@@ -1,3 +1,4 @@
+use egui::Widget;
 use log::info;
 use std::sync::{Arc, Mutex};
 use vello::Scene;
@@ -36,6 +37,8 @@ pub struct Robot {
     cell_size: f64,
     o: f64, // offset_x
     i: f64, // offset_y
+    center_x: f64,
+    center_y: f64,
     vertical_borders: Vec<Vec<bool>>,
     horizontal_borders: Vec<Vec<bool>>,
     colored: Vec<Vec<bool>>,
@@ -52,7 +55,7 @@ pub struct Robot {
 }
 
 impl Robot {
-    pub fn new(width: usize, height: usize, cell_size: f64) -> Self {
+    pub fn new(width: usize, height: usize, cell_size: f64, center_x: f64, center_y: f64) -> Self {
         // #[cfg(unix)]
         // tracy_full::zone!("Robot Initialization", tracy_full::color::Color::CYAN, true);
         Self {
@@ -85,8 +88,10 @@ impl Robot {
             robot_border_color: Color::from_rgb8(0, 0, 0),
             x: 0,
             y: 0,
-            o: 100.0,
-            i: 100.0,
+            o: 0f64,
+            i: 0f64,
+            center_x: center_x,
+            center_y: center_y,
             scale: 1.0,
         }
     }
@@ -211,7 +216,7 @@ impl Robot {
         );
     }
 
-    pub fn draw_field(&self, scene: &mut Scene) {
+    pub fn draw_field(&mut self, scene: &mut Scene) {
         // #[cfg(unix)]
         // tracy_full::zone!("Vello Draw Field", tracy_full::color::Color::CYAN, true);
         let mut new_scene = Scene::new();
@@ -220,32 +225,23 @@ impl Robot {
         self.draw_grid(&mut new_scene);
         self.draw_robot(&mut new_scene);
 
-        let center_x = self.width as f64 / 2.0 * self.cell_size + self.o;
-        let center_y = self.height as f64 / 2.0 * self.cell_size + self.i;
-        info!("self.o: {} self.i: {}", self.o, self.i);
-        info!("center_x: {} center_y: {}", center_x, center_y);
-        let transform = Affine::translate((center_x, center_y)) * Affine::scale(self.scale);
+        // info!("center_x: {} center_y: {}", center_x, center_y);
+        let transform = Affine::translate((self.center_x, self.center_y))
+            * Affine::scale(self.scale)
+            * Affine::translate((-self.center_x, -self.center_y));
 
         scene.append(&new_scene, Some(transform));
     }
 
-    pub fn change_offset_x(&mut self, o: f64) {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Change Offset X", tracy_full::color::Color::CYAN, true);
-        self.o += o;
-    }
-
-    pub fn change_offset_y(&mut self, i: f64) {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Change Offset Y", tracy_full::color::Color::CYAN, true);
-        self.i += i;
-    }
-
-    pub fn change_offset(&mut self, o: f64, i: f64) {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Change Offset", tracy_full::color::Color::CYAN, true);
-        self.change_offset_x(o);
-        self.change_offset_y(i);
+    pub fn update_centers(&mut self, width: f64, height: f64) {
+        self.center_x = width / 2.0;
+        self.center_y = height / 2.0;
+        self.o = self.center_x - self.cell_size * self.get_width() as f64 / 2.0;
+        self.i = self.center_y - self.cell_size * self.get_height() as f64 / 2.0;
+        println!(
+            "Updates centers and offsets: x: {} y: {}",
+            self.center_x, self.center_y
+        );
     }
 
     pub fn change_scale(&mut self, delta_scale: f64) {
@@ -254,7 +250,7 @@ impl Robot {
         if 0.1 < self.scale + delta_scale && self.scale + delta_scale < 10.0 {
             self.scale += delta_scale;
         }
-        info!("Scale: {}", self.scale);
+        // info!("Scale: {}", self.scale);
     }
 
     pub fn get_scale(&self) -> f64 {

@@ -105,4 +105,8 @@ impl KumirGui {
     pub fn add_shapes_to_scene(&mut self) {
         self.kumir_state.add_shapes_to_scene();
     }
+
+    pub fn update_transform(&mut self, width: f64, height: f64) {
+        self.kumir_state.update_transform(width, height);
+    }
 }
