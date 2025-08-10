@@ -89,14 +89,38 @@ pub enum Operation {}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Keyword {
-    Alg,
-    Start,
-    Stop,
+    Function(Function),
     TypeDef(TypeDefinition),
     Condition(Condition),
     Loop(Loop),
     Range(Range),
     IO(IO),
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Function {
+    ///алг
+    Alg,
+    ///нач
+    Start,
+    ///кон
+    Stop,
+    ///дано
+    Expects,
+    ///арг рез аргрез
+    FunctionParamType(FunctionParamType),
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum FunctionParamType {
+    ///Nothing
+    Normal,
+    ///рез
+    ResultParam,
+    ///арг
+    ArgumentParam,
+    ///аргрез
+    ArgumentResultParam,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -171,9 +195,10 @@ impl fmt::Display for TypeDefinition {
 impl From<&str> for Keyword {
     fn from(value: &str) -> Self {
         match value {
-            "алг" => Keyword::Alg,
-            "нач" => Keyword::Start,
-            "кон" => Keyword::Stop,
+            "алг" => Keyword::Function(Function::Alg),
+            "нач" => Keyword::Function(Function::Start),
+            "кон" => Keyword::Function(Function::Stop),
+            "дано" => Keyword::Function(Function::Expects),
             "цел" => Keyword::TypeDef(TypeDefinition::Int),
             "вещ" => Keyword::TypeDef(TypeDefinition::Float),
             "лог" => Keyword::TypeDef(TypeDefinition::Bool),
@@ -194,6 +219,15 @@ impl From<&str> for Keyword {
             "ввод" => Keyword::IO(IO::Input),
             "нс" => Keyword::IO(IO::ChangeLine),
             "вывод" => Keyword::IO(IO::Output),
+            "арг" => Keyword::Function(Function::FunctionParamType(
+                FunctionParamType::ArgumentParam,
+            )),
+            "рез" => {
+                Keyword::Function(Function::FunctionParamType(FunctionParamType::ResultParam))
+            }
+            "аргрез" => Keyword::Function(Function::FunctionParamType(
+                FunctionParamType::ArgumentResultParam,
+            )),
             _ => {
                 panic!("Error")
             }
@@ -280,6 +314,10 @@ impl Lexer {
                         "вывод",
                         "нс",
                         "раз",
+                        "арг",
+                        "рез",
+                        "аргрез",
+                        "дано",
                     ]
                     .contains(&word.as_str())
                     {
@@ -290,6 +328,8 @@ impl Lexer {
                             "нет" => Ok(Token::Bool(false)),
                             _ => Err("Ошибка".to_string()),
                         }
+                    } else if word.as_str() == "надо" {
+                        self.next_token()
                     } else {
                         Ok(Token::Identifier(word))
                     }

@@ -4,7 +4,8 @@ use hashbrown::HashMap;
 use log::info;
 
 use crate::lexer::{
-    self, Condition, Delimiter, IO, Keyword, Loop, Operator, Range, Token, TypeDefinition,
+    self, Condition, Delimiter, FunctionParamType, IO, Keyword, Loop, Operator, Range, Token,
+    TypeDefinition,
 };
 
 #[derive(Debug, PartialEq, Clone)]
@@ -32,6 +33,8 @@ pub enum Stmt {
     Alg {
         name: String,
         body: Vec<Stmt>,
+        params: Vec<FunctionParameter>,
+        return_type: Option<TypeDefinition>,
     },
     Condition {
         condition: Expr,
@@ -114,6 +117,13 @@ impl Literal {
     }
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct FunctionParameter {
+    name: String,
+    type_definition: TypeDefinition,
+    result_type: FunctionParamType,
+}
+
 pub struct Parser {
     pub tokens: Vec<Token>,
     pub position: usize,
@@ -127,17 +137,22 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Result<AstNode, String> {
+    pub fn parse(&mut self) -> Result<AstNode, (Vec<Stmt>, String)> {
         let mut statements = Vec::new();
         while !self.is_eof() {
-            statements.push(self.parse_stmt()?);
+            statements.push(match self.parse_stmt() {
+                Ok(stmt) => stmt,
+                Err(err) => {
+                    return Err((statements, err));
+                }
+            })
         }
         Ok(AstNode::Program(statements))
     }
 
     fn parse_stmt(&mut self) -> Result<Stmt, String> {
         match self.current_token().clone() {
-            Token::Keyword(Keyword::Alg) => self.parse_alg(),
+            Token::Keyword(Keyword::Function(lexer::Function::Alg)) => self.parse_alg(),
             Token::Keyword(Keyword::Condition(Condition::If)) => self.parse_condition(),
             Token::Keyword(Keyword::Loop(Loop::Start)) => self.parse_loop(),
             Token::Keyword(Keyword::Loop(Loop::Break)) => Ok(Stmt::Break),
@@ -302,6 +317,15 @@ impl Parser {
 
     fn parse_alg(&mut self) -> Result<Stmt, String> {
         self.advance(); // Skip Alg
+        let return_type =
+            if let Token::Keyword(Keyword::TypeDef(return_type)) = self.current_token() {
+                let return_type = *return_type;
+                self.advance();
+                Some(return_type)
+            } else {
+                None
+            };
+        info!("Function return type: {:?}", return_type);
         let name = match self.current_token().clone() {
             Token::Identifier(name) => {
                 self.advance();
@@ -309,15 +333,147 @@ impl Parser {
             }
             _ => "main".to_string(),
         };
+        info!("Function name: {name}");
+        let mut params: Vec<FunctionParameter> = vec![];
+        if Token::Delimiter(Delimiter::ParenthesisOpen) == *self.current_token() {
+            self.advance();
+            info!(
+                "starting parsing function params at token {}",
+                self.position
+            );
+            while !self.check(&Token::Delimiter(Delimiter::ParenthesisClose)) && !self.is_eof() {
+                info!("starting parsing function param at token {}", self.position);
+                let result_type: FunctionParamType = {
+                    if let Token::Keyword(Keyword::Function(lexer::Function::FunctionParamType(
+                        result_type,
+                    ))) = *self.current_token()
+                    {
+                        //Skip param result type
+                        self.advance();
+                        if result_type == FunctionParamType::ArgumentParam {
+                            if Token::Keyword(Keyword::Function(
+                                lexer::Function::FunctionParamType(FunctionParamType::ResultParam),
+                            )) == *self.current_token()
+                            {
+                                FunctionParamType::ArgumentResultParam
+                            } else {
+                                result_type
+                            }
+                        } else {
+                            result_type
+                        }
+                    } else {
+                        FunctionParamType::Normal
+                    }
+                };
 
-        // self.expect(Token::Delimiter(Delimiter::ParenthesisOpen))?;
-        // self.expect(Token::Delimiter(Delimiter::ParenthesisClose))?;
+                info!("Function result param type parsed: {:?}", result_type);
+
+                let type_definition: TypeDefinition = {
+                    if let Token::Keyword(Keyword::TypeDef(type_def)) = self.current_token() {
+                        *type_def
+                    } else {
+                        return Err(format!("Typedef for function parameter required"));
+                    }
+                };
+
+                info!("Function param typedef parsed: {:?}", type_definition);
+
+                //Skip typedef
+                self.advance();
+
+                let names: Vec<String> = {
+                    let mut names = vec![];
+                    while let Token::Identifier(name) = self.current_token() {
+                        info!("Pushing name {}, current token {}", &name, self.position);
+                        names.push(name.clone());
+                        //Skip name
+                        self.advance();
+                        if *self.current_token() != Token::Delimiter(Delimiter::Comma) {
+                            break;
+                        }
+                        //skip comma
+                        self.advance();
+                    }
+
+                    names
+                };
+
+                params.extend(names.iter().map(|name| FunctionParameter {
+                    name: name.to_string(),
+                    type_definition,
+                    result_type,
+                }));
+            }
+        }
+        info!(
+            "Function params parsed: {:#?}, token stoped: {}",
+            params, self.position
+        );
+
+        self.expect(Token::Keyword(Keyword::Function(lexer::Function::Start)))?;
+
         let mut body = Vec::new();
-        while !self.check(&Token::Keyword(Keyword::Stop)) && !self.is_eof() {
+        while !self.check(&Token::Keyword(Keyword::Function(lexer::Function::Stop)))
+            && !self.is_eof()
+        {
             body.push(self.parse_stmt()?);
         }
-        self.expect(Token::Keyword(Keyword::Stop))?;
-        Ok(Stmt::Alg { name, body })
+        self.expect(Token::Keyword(Keyword::Function(lexer::Function::Stop)))?;
+        Ok(Stmt::Alg {
+            name,
+            body,
+            return_type,
+            params,
+        })
+    }
+    fn collect_params(
+        &mut self,
+        result_type: &FunctionParamType,
+    ) -> Result<Vec<FunctionParameter>, String> {
+        let mut params = vec![];
+        let type_definition = {
+            if let Token::Keyword(Keyword::TypeDef(type_def)) = *self.current_token() {
+                self.advance();
+                type_def
+            } else {
+                return Err(format!(
+                    "Couldn't collect function params expected type def found {:?}",
+                    self.current_token()
+                ));
+            }
+        };
+        let identifier = {
+            if let Token::Identifier(identifier) = self.current_token() {
+                identifier
+            } else {
+                return Err(format!(
+                    "Couldn't collect function params expected identifier found {:?}",
+                    self.current_token()
+                ));
+            }
+        };
+        params.push(FunctionParameter {
+            name: identifier.clone(),
+            type_definition,
+            result_type: *result_type,
+        });
+        self.expect(Token::Delimiter(Delimiter::Comma));
+        while let Token::Identifier(identifier) = self.current_token().clone() {
+            params.push(FunctionParameter {
+                name: identifier.clone(),
+                type_definition,
+                result_type: *result_type,
+            });
+            //Skip identifier token
+            self.advance();
+            if *self.current_token() != Token::Delimiter(Delimiter::Comma) {
+                break;
+            }
+            //Skip comma token
+            self.advance();
+        }
+        Ok(params)
     }
 
     fn parse_var_decl(&mut self, type_def: &TypeDefinition) -> Result<Stmt, String> {
@@ -451,6 +607,10 @@ impl Parser {
         self.position += 1;
     }
 
+    fn next_token(&self) -> &Token {
+        self.tokens.get(self.position + 1).unwrap_or(&Token::Eof)
+    }
+
     fn check(&self, token: &Token) -> bool {
         self.current_token() == token
     }
@@ -495,6 +655,7 @@ impl AstNode {
 #[derive(Debug, PartialEq, Clone)]
 pub enum EvalResult {
     Normal,
+    Return(Literal),
     Break,
 }
 
@@ -518,7 +679,12 @@ impl Stmt {
                 let value = value.eval(environment)?;
                 environment.assign_var(name, value);
             }
-            Stmt::Alg { name, body } => todo!(),
+            Stmt::Alg {
+                name,
+                body,
+                params,
+                return_type,
+            } => todo!(),
             Stmt::Condition {
                 condition,
                 left,
@@ -782,7 +948,9 @@ impl Expr {
                 {
                     environment.assign_var(&name, value.clone());
                 }
-                execute_body(&function.body, environment)?;
+                if let EvalResult::Return(value) = execute_body(&function.body, environment)? {
+                    return Ok(value);
+                }
                 for name in function.params.iter().map(|param| param.0.clone()) {
                     environment.remove_var(&name)?;
                 }
@@ -892,8 +1060,11 @@ impl Environment {
 
 fn execute_body(body: &[Stmt], environment: &mut Environment) -> Result<EvalResult, String> {
     for stmt in body {
-        if EvalResult::Break == stmt.eval(environment)? {
-            return Ok(EvalResult::Break);
+        let eval_result = stmt.eval(environment)?;
+        match eval_result {
+            EvalResult::Normal => {}
+            EvalResult::Return(literal) => return Ok(EvalResult::Return(literal)),
+            EvalResult::Break => return Ok(EvalResult::Break),
         }
     }
     Ok(EvalResult::Normal)

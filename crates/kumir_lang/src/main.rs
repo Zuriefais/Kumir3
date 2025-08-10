@@ -7,7 +7,7 @@ use log::info;
 
 fn main() {
     env_logger::init();
-    let code = include_str!("test.kum");
+    let code = include_str!("test3.kum");
     let mut lexer = Lexer::new(code);
     let mut tokens = vec![];
     loop {
@@ -29,15 +29,22 @@ fn main() {
             .join("\n")
     );
     let mut parser = Parser::new(tokens);
-    let ast = parser.parse();
-    info!("AST generated: {ast:#?}");
-    info!("AST generator stopped at token: {}", parser.position);
+    match parser.parse() {
+        Ok(ast) => {
+            info!("AST generated: {ast:#?}");
+            let mut interpreter = Interpreter::new(ast);
 
-    let mut interpreter = Interpreter::new(ast.unwrap());
+            info!("Interpreter result: {:?}", interpreter.run());
 
-    info!("Interpreter result: {:?}", interpreter.run());
-
-    info!("Interpreter environment: {:?}", interpreter.environment);
+            info!("Interpreter environment: {:?}", interpreter.environment);
+        }
+        Err(err) => {
+            let (statements, err) = err;
+            info!("Error parsing AST: {}", err);
+            info!("Statements parsed: {:?}", statements);
+            info!("AST generator stopped at token: {}", parser.position);
+        }
+    }
 }
 
 pub fn create_test_ast() -> AstNode {

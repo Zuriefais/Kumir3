@@ -28,22 +28,22 @@ impl Interpreter {
         }
     }
 
-    pub fn new_from_tokens(tokens: Vec<Token>) -> Result<Self, String> {
-        Ok(Self::new(Parser::new(tokens).parse()?))
-    }
+    // pub fn new_from_tokens(tokens: Vec<Token>) -> Result<Self, String> {
+    //     Ok(Self::new(Parser::new(tokens).parse()?))
+    // }
 
-    pub fn new_from_string(input: &str) -> Result<Self, String> {
-        let mut lexer = Lexer::new(input);
-        let mut tokens = vec![];
-        loop {
-            match lexer.next_token() {
-                Ok(Token::Eof) => break,
-                Ok(token) => {
-                    tokens.push(token);
-                }
-                Err(e) => println!("Ошибка: {e}"),
-            }
-        }
-        Self::new_from_tokens(tokens)
-    }
+    // pub fn new_from_string(input: &str) -> Result<Self, String> {
+    //     let mut lexer = Lexer::new(input);
+    //     let mut tokens = vec![];
+    //     loop {
+    //         match lexer.next_token() {
+    //             Ok(Token::Eof) => break,
+    //             Ok(token) => {
+    //                 tokens.push(token);
+    //             }
+    //             Err(e) => println!("Ошибка: {e}"),
+    //         }
+    //     }
+    //     Self::new_from_tokens(tokens)
+    // }
 }
