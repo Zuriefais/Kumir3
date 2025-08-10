@@ -282,10 +282,10 @@ impl Robot {
     pub fn hovered(&mut self, pos: Pos2) {
         let x = pos.x as f64;
         let y = pos.y as f64;
-        let x_full = ((x - self.o) / self.cell_size).floor() * self.cell_size;
-        let y_full = ((y - self.i) / self.cell_size).floor() * self.cell_size;
+        let x_full = ((x - self.o) / self.cell_size).floor() * self.cell_size + self.o;
+        let y_full = ((y - self.i) / self.cell_size).floor() * self.cell_size + self.i;
 
-        let border_in_cell = self.cell_size / 20.0;
+        let border_in_cell = self.cell_size / 15.0;
 
         let pos_min = Point::new(x_full + border_in_cell, y_full + border_in_cell);
         let pos_max = Point::new(
@@ -293,39 +293,48 @@ impl Robot {
             y_full + self.cell_size - border_in_cell,
         );
 
-        self.hovered = {
-            if pos_min.x < x && x < pos_max.x && pos_min.y < y && y < pos_max.y {
-                Hovered::Cell {
-                    min: pos_min,
-                    max: pos_max,
+        if self.o <= x
+            && x <= self.o + self.cell_size * self.get_width() as f64
+            && self.i <= y
+            && y <= self.i + self.cell_size * self.get_height() as f64
+        {
+            self.hovered = {
+                if pos_min.x < x && x < pos_max.x && pos_min.y < y && y < pos_max.y {
+                    Hovered::Cell {
+                        min: pos_min,
+                        max: pos_max,
+                    }
+                } else if x < pos_min.x {
+                    Hovered::LeftBorder {
+                        min: Point::new(x_full - border_in_cell, y_full),
+                        max: Point::new(x_full + border_in_cell, y_full + self.cell_size),
+                    }
+                } else if y < pos_min.y {
+                    Hovered::BorderAbove {
+                        min: Point::new(x_full, y_full - border_in_cell),
+                        max: Point::new(x_full + self.cell_size, y_full + border_in_cell),
+                    }
+                } else if x > pos_max.x {
+                    Hovered::RightBorder {
+                        min: Point::new(x_full + self.cell_size - border_in_cell, y_full),
+                        max: Point::new(
+                            x_full + self.cell_size + border_in_cell,
+                            y_full + self.cell_size,
+                        ),
+                    }
+                } else if y > pos_max.y {
+                    Hovered::BorderUnder {
+                        min: Point::new(x_full, y_full + self.cell_size - border_in_cell),
+                        max: Point::new(
+                            x_full + self.cell_size,
+                            y_full + self.cell_size + border_in_cell,
+                        ),
+                    }
+                } else {
+                    Hovered::None
                 }
-            } else if x < pos_min.x {
-                Hovered::LeftBorder {
-                    min: Point::new(x_full - border_in_cell, y_full),
-                    max: Point::new(x_full + border_in_cell, y_full + self.cell_size),
-                }
-            } else if y < pos_min.y {
-                Hovered::BorderAbove {
-                    min: Point::new(x_full, y_full - border_in_cell),
-                    max: Point::new(x_full + self.cell_size, y_full + border_in_cell),
-                }
-            } else if x > pos_max.x {
-                Hovered::RightBorder {
-                    min: Point::new(x_full + self.cell_size - border_in_cell, y_full),
-                    max: Point::new(x_full + border_in_cell, y_full + self.cell_size),
-                }
-            } else if y > pos_max.y {
-                Hovered::BorderUnder {
-                    min: Point::new(x_full, y_full + self.cell_size - border_in_cell),
-                    max: Point::new(
-                        x_full + self.cell_size,
-                        y_full + self.cell_size + border_in_cell,
-                    ),
-                }
-            } else {
-                Hovered::None
-            }
-        };
+            };
+        }
     }
 
     pub fn change_scale(&mut self, delta_scale: f64) {
