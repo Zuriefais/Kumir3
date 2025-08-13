@@ -1,6 +1,8 @@
-use crate::kumir_state::KumirState;
-use egui::{Sense, TextureId, Vec2, load::SizedTexture};
+use crate::kumir_state::{KumirState, Modes};
+use crate::widgets::robot_gui::RobotWidget;
+use egui::{Align2, Pos2, Sense, TextureId, Vec2, load::SizedTexture};
 use egui_extras::syntax_highlighting::highlight;
+use std::fmt;
 use std::sync::{Arc, Mutex};
 
 #[derive(Default)]
@@ -11,15 +13,28 @@ pub struct VelloWindowOptions {
     pub changed: bool,
 }
 
+#[derive(PartialEq)]
+pub enum Lang {
+    Python,
+    KumirLang,
+}
+
+impl fmt::Display for Lang {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Lang::Python => write!(f, "Python"),
+            Lang::KumirLang => write!(f, "КуМир"),
+        }
+    }
+}
 pub struct IDEWindowOptions {
     code: String,
-    lang: String,
+    lang: Lang,
 }
 
 pub enum Pane {
     Unknown(usize),
     Terminal,
-    Tools,
     IDE(IDEWindowOptions),
     Vello(Arc<Mutex<VelloWindowOptions>>),
 }
@@ -33,7 +48,6 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
         match pane {
             Pane::Unknown(u) => format!("{u}").into(),
             Pane::Terminal => "Terminal".to_string().into(),
-            Pane::Tools => "Tools".to_string().into(),
             Pane::IDE(_) => "IDE".to_string().into(),
             Pane::Vello(_) => "Vello window".to_string().into(),
         }
@@ -57,7 +71,6 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                     match pane {
                         Pane::Unknown(nr) => format!("{nr}"),
                         Pane::Terminal => "Terminal".to_string(),
-                        Pane::Tools => "Tools".to_string(),
                         Pane::IDE(_) => "IDE".to_string(),
                         Pane::Vello(_) => "Vello".to_string(),
                     }
@@ -76,18 +89,26 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                 ui.label(format!("The contents of pane {nr}."));
             }
             Pane::Terminal => todo!(),
-            Pane::Tools => todo!(),
             Pane::IDE(options) => {
                 ui.label("Самое современное IDE");
                 ui.horizontal(|ui| {
                     ui.set_height(0.0);
                     ui.label("An example of syntax highlighting in a TextEdit.");
                 });
+                ui.end_row();
 
-                ui.horizontal(|ui| {
-                    ui.label("Language:");
-                    ui.text_edit_singleline(&mut options.lang);
-                });
+                // ui.horizontal(|ui: &egui::Ui| {
+                //     ui.label("Language:");
+                //     // ui.text_edit_singleline(&mut options.lang);
+
+                // });
+
+                egui::ComboBox::from_label("<- language")
+                    .selected_text(format!("{}", options.lang))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut options.lang, Lang::Python, "Python");
+                        ui.selectable_value(&mut options.lang, Lang::KumirLang, "Кумир");
+                    });
 
                 // let mut theme = CodeTheme::from_memory(ui.ctx(), ui.style());
                 let mut theme =
@@ -100,15 +121,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                 });
 
                 let mut layouter = |ui: &egui::Ui, buf: &str, wrap_width: f32| {
-                    let lang = {
-                        let lang = options.lang.to_lowercase();
-                        let mut chars = lang.chars();
-                        match chars.next() {
-                            None => String::new(),
-                            Some(f) => f.to_uppercase().collect::<String>() + chars.as_str(),
-                        }
-                    };
-
+                    let lang = format!("{}", options.lang);
                     let mut layout_job =
                         highlight(ui.ctx(), ui.style(), &theme, buf, lang.as_str());
                     layout_job.wrap.max_width = wrap_width;
@@ -128,6 +141,19 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                 });
             }
             Pane::Vello(vello_options) => {
+                egui::Window::new("Параметры окна и поля")
+                    .resizable([false, false])
+                    .constrain_to(ui.available_rect_before_wrap())
+                    .anchor(Align2::RIGHT_TOP, [-10.0, 10.0])
+                    .show(&ui.ctx().clone(), |ui| {
+                        match self.kumir_state.selected_mode {
+                            Modes::Robot => ui.add(RobotWidget {
+                                kumir_state: &mut self.kumir_state,
+                            }),
+                            _ => ui.label("Режим не выбран"),
+                        }
+                    });
+
                 let available_size = ui.available_size() * ui.ctx().pixels_per_point();
                 if let Ok(mut vello_options) = vello_options.lock() {
                     if vello_options.width != available_size.x as u32
@@ -143,16 +169,21 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                             id: vello_options.texture,
                             size: egui::Vec2::new(available_size.x, available_size.y),
                         })
-                        .interact(Sense::drag());
+                        .interact(Sense::click());
 
-                    let Vec2 { x, y } = response.drag_delta();
-                    self.kumir_state.change_offset(x, y);
+                    self.kumir_state.update_min_point(response.rect.min);
 
                     if response.hovered() {
-                        ui.input(|input| {
+                        ui.input(|input: &'_ egui::InputState| {
                             let zoom_delta = input.zoom_delta();
                             self.kumir_state.change_scale(zoom_delta as f64 - 1.0);
+                            self.kumir_state.hover(input.pointer.hover_pos());
+                            // println!("{:?}", input.pointer.hover_pos());
                         });
+                    }
+
+                    if response.clicked() {
+                        self.kumir_state.click();
                     }
                 }
             }
@@ -180,8 +211,8 @@ pub fn create_tree(vello_options: Arc<Mutex<VelloWindowOptions>>) -> egui_tiles:
     tabs.push(tiles.insert_pane(Pane::Vello(vello_options)));
     tabs.push(tiles.insert_pane(gen_pane()));
     tabs.push(tiles.insert_pane(Pane::IDE(IDEWindowOptions {
-        code: "fn main() {\n    println!(\"Hello, world!\");\n}".to_string(),
-        lang: "Rust".to_string(),
+        code: "print(\"Hello, world!\")\n".to_string(),
+        lang: Lang::Python,
     })));
 
     let root = tiles.insert_tab_tile(tabs);

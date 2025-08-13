@@ -8,7 +8,7 @@ pub struct RobotWidget<'a> {
 
 impl Widget for RobotWidget<'_> {
     fn ui(self, ui: &mut Ui) -> Response {
-        ui.group(|ui| {
+        ui.scope(|ui| {
             let mut rob = self.kumir_state.modes.robot.lock().unwrap();
             ui.horizontal(|ui| {
                 if ui.button("-").clicked() {

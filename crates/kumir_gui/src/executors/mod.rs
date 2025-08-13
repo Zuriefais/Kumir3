@@ -1,7 +1,16 @@
-use crate::executors::robot::Robot;
+use egui::Pos2;
 use vello::Scene;
-
 pub mod robot;
+
+pub trait Executor {
+    fn clear_field(&self, scene: &mut Scene);
+    fn draw_field(&self, scene: &mut Scene);
+    fn base_color(&self);
+    fn change_scale(&mut self, delta_scale: f64);
+    fn get_scale(&self) -> f64;
+    fn hovered(&mut self, pos: Pos2);
+    fn clicked(&mut self, pos: Pos2);
+}
 
 // pub fn add_shapes_to_scene(scene: &mut Scene, width: u32, height: u32) {
 //     let rob = Robot::new(9, 9, 100.0);

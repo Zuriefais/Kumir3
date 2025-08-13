@@ -4,13 +4,14 @@ use crate::kumir_state::{EditingStates, KumirState, Modes, ModesStored};
 use crate::widgets::panes::{
     IDEWindowOptions, Pane, TreeBehavior, VelloWindowOptions, create_tree,
 };
-use crate::widgets::robot_gui::RobotWidget;
 use crate::widgets::usage_diagnostics::UsageDiagnostics;
 use egui::Vec2;
+use egui::color_picker::Alpha;
 use egui::{Context, TextureId, load::SizedTexture};
 use egui::{Response, Sense, Ui, Widget};
 
 use log::info;
+use vello::peniko::color::{AlphaColor, Srgb};
 
 pub struct KumirGui {
     egui_context: Context,
@@ -101,21 +102,17 @@ impl KumirGui {
             };
             self.tree.ui(&mut behavior, ui);
         });
-
-        egui::Window::new("Изменить поле")
-            .resizable([true, false])
-            .default_pos([15.0, 00.0])
-            .show(&self.egui_context, |ui| {
-                match self.kumir_state.selected_mode {
-                    Modes::Robot => ui.add(RobotWidget {
-                        kumir_state: &mut self.kumir_state,
-                    }),
-                    _ => ui.label("None"),
-                }
-            });
     }
 
     pub fn add_shapes_to_scene(&mut self) {
         self.kumir_state.add_shapes_to_scene();
+    }
+
+    pub fn update_transform(&mut self, width: f64, height: f64) {
+        self.kumir_state.update_transform(width, height);
+    }
+
+    pub fn base_color(&self) -> AlphaColor<Srgb> {
+        self.kumir_state.base_color()
     }
 }

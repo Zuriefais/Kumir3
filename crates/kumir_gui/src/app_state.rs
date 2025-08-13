@@ -7,7 +7,6 @@ use egui_wgpu::wgpu::SurfaceError;
 use egui_wgpu::{ScreenDescriptor, wgpu};
 use log::info;
 use std::sync::{Arc, Mutex};
-use std::thread;
 use vello::peniko::color::palette;
 use vello::wgpu::TextureFormat;
 use vello::{AaConfig, Renderer, RendererOptions, Scene};
@@ -135,14 +134,15 @@ impl AppState {
         )
         .expect("Couldn't create renderer");
         let vello_scene = Arc::new(Mutex::new(Scene::new()));
-        info!("App State created!!");
 
-        let kumir_state = KumirState::new(Arc::clone(&vello_scene), width, height);
+        let kumir_state = KumirState::new(Arc::clone(&vello_scene), 0f64, 0f64);
         let kumir_gui = KumirGui::new(
             egui_renderer.context(),
             kumir_state,
             vello_window_options.clone(),
         );
+
+        info!("App State created!!");
 
         Ok(Self {
             device,
@@ -190,6 +190,9 @@ impl AppState {
             );
             self.vello_texture =
                 create_vello_texture(&self.device, vello_size.width, vello_size.height);
+            self.kumir_gui
+                .update_transform(vello_size.width as f64, vello_size.height as f64);
+            info!("Updated transform");
         }
         self.vello_scene.lock().unwrap().reset();
         self.kumir_gui.add_shapes_to_scene();
@@ -244,7 +247,7 @@ impl AppState {
                 &self.vello_scene.lock().unwrap(),
                 &vello_view,
                 &vello::RenderParams {
-                    base_color: palette::css::BLACK,
+                    base_color: self.kumir_gui.base_color(),
                     width,
                     height,
                     antialiasing_method: AaConfig::Msaa16,

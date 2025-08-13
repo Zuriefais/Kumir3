@@ -1,8 +1,9 @@
+use egui::{Pos2, Widget};
 use log::info;
 use std::sync::{Arc, Mutex};
 use vello::Scene;
 use vello::kurbo::{Affine, Line, Point, Rect, Stroke};
-use vello::peniko::Color;
+use vello::peniko::{Color, color::palette::css};
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum RowsMode {
@@ -22,12 +23,26 @@ pub struct RobotEditingState {
     pub deleting_columns_mode: ColumnsMode,
 }
 
-pub struct Cell {
-    colored: bool,
-    left: bool,
-    right: bool,
-    up: bool,
-    down: bool,
+pub enum Hovered {
+    Cell {
+        min: Point,
+        max: Point,
+        x: usize,
+        y: usize,
+    },
+    VerticalBorder {
+        min: Point,
+        max: Point,
+        x: usize,
+        y: usize,
+    },
+    HorizontalBorder {
+        min: Point,
+        max: Point,
+        x: usize,
+        y: usize,
+    },
+    None,
 }
 
 pub struct Robot {
@@ -36,6 +51,8 @@ pub struct Robot {
     cell_size: f64,
     o: f64, // offset_x
     i: f64, // offset_y
+    center_x: f64,
+    center_y: f64,
     vertical_borders: Vec<Vec<bool>>,
     horizontal_borders: Vec<Vec<bool>>,
     colored: Vec<Vec<bool>>,
@@ -46,15 +63,17 @@ pub struct Robot {
     cell_color: Color,
     robot_color: Color,
     robot_border_color: Color,
+    hovered_color: Color,
     x: usize,
     y: usize,
     scale: f64,
+    hovered: Hovered,
 }
 
 impl Robot {
-    pub fn new(width: usize, height: usize, cell_size: f64) -> Self {
-        #[cfg(unix)]
-        tracy_full::zone!("Robot Initialization", tracy_full::color::Color::CYAN, true);
+    pub fn new(width: usize, height: usize, cell_size: f64, center_x: f64, center_y: f64) -> Self {
+        // #[cfg(unix)]
+        // tracy_full::zone!("Robot Initialization", tracy_full::color::Color::CYAN, true);
         Self {
             width,
             height,
@@ -76,24 +95,29 @@ impl Robot {
                 borders
             },
             colored: vec![vec![false; height]; width],
-            fill_color: Color::from_rgb8(39, 143, 40),
+            // fill_color: Color::from_rgb8(39, 143, 40),
+            fill_color: css::DARK_GREEN,
             grid_color: Color::from_rgb8(200, 200, 16),
             stroke_active: Stroke::new(6.0),
             storke_inactive: Stroke::new(2.0),
             cell_color: Color::from_rgb8(147, 112, 219),
             robot_color: Color::from_rgb8(255, 255, 255),
             robot_border_color: Color::from_rgb8(0, 0, 0),
+            hovered_color: css::BLUE_VIOLET,
             x: 0,
             y: 0,
-            o: 100.0,
-            i: 100.0,
+            o: 0f64,
+            i: 0f64,
+            center_x: center_x,
+            center_y: center_y,
             scale: 1.0,
+            hovered: Hovered::None,
         }
     }
 
     pub fn clear_field(&self, scene: &mut Scene) {
-        #[cfg(unix)]
-        tracy_full::zone!("Vello Clear Field", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Vello Clear Field", tracy_full::color::Color::CYAN, true);
         scene.fill(
             vello::peniko::Fill::NonZero,
             Affine::IDENTITY,
@@ -134,8 +158,8 @@ impl Robot {
     }
 
     pub fn draw_grid(&self, scene: &mut Scene) {
-        #[cfg(unix)]
-        tracy_full::zone!("Vello Draw Grid", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Vello Draw Grid", tracy_full::color::Color::CYAN, true);
         for x in 0..=self.width {
             for y in 0..=self.height {
                 let p1 = Point::new(
@@ -187,9 +211,8 @@ impl Robot {
     }
 
     pub fn draw_robot(&self, scene: &mut Scene) {
-        #[cfg(unix)]
-        tracy_full::zone!("Vello Draw Robot", tracy_full::color::Color::CYAN, true);
-        let stroke = Stroke::new(0.5);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Vello Draw Robot", tracy_full::color::Color::CYAN, true);
         let center_x = self.cell_size / 2.0 + self.cell_size * (self.x as f64) + self.o;
         let center_y = self.cell_size / 2.0 + self.cell_size * (self.y as f64) + self.i;
 
@@ -209,47 +232,218 @@ impl Robot {
             None,
             &robot_shape,
         );
+
+        scene.stroke(
+            &Stroke::new(2.0),
+            transform,
+            Color::from_rgb8(0, 0, 0),
+            None,
+            &robot_shape,
+        );
     }
 
-    pub fn draw_field(&self, scene: &mut Scene) {
-        #[cfg(unix)]
-        tracy_full::zone!("Vello Draw Field", tracy_full::color::Color::CYAN, true);
+    pub fn draw_hovered(&self, scene: &mut Scene) {
+        match self.hovered {
+            Hovered::None => (),
+            Hovered::Cell {
+                min,
+                max,
+                x: _,
+                y: _,
+            }
+            | Hovered::HorizontalBorder {
+                min,
+                max,
+                x: _,
+                y: _,
+            }
+            | Hovered::VerticalBorder {
+                min,
+                max,
+                x: _,
+                y: _,
+            } => scene.fill(
+                vello::peniko::Fill::NonZero,
+                Affine::IDENTITY,
+                self.hovered_color,
+                None,
+                &Rect::from_points(min, max),
+            ),
+        }
+    }
+
+    pub fn draw_field(&mut self, scene: &mut Scene) {
+        // #[cfg(unix)]
+        // tracy_full::zone!("Vello Draw Field", tracy_full::color::Color::CYAN, true);
         let mut new_scene = Scene::new();
         self.clear_field(&mut new_scene);
         self.fill_cells(&mut new_scene);
         self.draw_grid(&mut new_scene);
+        self.draw_hovered(&mut new_scene);
         self.draw_robot(&mut new_scene);
 
-        let center_x = self.width as f64 / 2.0 * self.cell_size + self.o;
-        let center_y = self.height as f64 / 2.0 * self.cell_size + self.i;
-        let transform = Affine::translate((center_x, center_y)) * Affine::scale(self.scale);
+        // info!("center_x: {} center_y: {}", center_x, center_y);
+        let transform = Affine::translate((self.center_x, self.center_y))
+            * Affine::scale(self.scale)
+            * Affine::translate((-self.center_x, -self.center_y));
 
         scene.append(&new_scene, Some(transform));
     }
 
-    pub fn change_offset_x(&mut self, o: f64) {
-        #[cfg(unix)]
-        tracy_full::zone!("Change Offset X", tracy_full::color::Color::CYAN, true);
-        self.o += o;
+    pub fn update_centers(&mut self, width: f64, height: f64) {
+        self.center_x = width / 2.0;
+        self.center_y = height / 2.0;
+        self.o = self.center_x - self.cell_size * self.get_width() as f64 / 2.0;
+        self.i = self.center_y - self.cell_size * self.get_height() as f64 / 2.0;
+        println!(
+            "Updates centers and offsets: x: {} y: {}",
+            self.center_x, self.center_y
+        );
     }
 
-    pub fn change_offset_y(&mut self, i: f64) {
-        #[cfg(unix)]
-        tracy_full::zone!("Change Offset Y", tracy_full::color::Color::CYAN, true);
-        self.i += i;
+    pub fn base_color(&self) -> Color {
+        self.fill_color
     }
 
-    pub fn change_offset(&mut self, o: f64, i: f64) {
-        #[cfg(unix)]
-        tracy_full::zone!("Change Offset", tracy_full::color::Color::CYAN, true);
-        self.change_offset_x(o);
-        self.change_offset_y(i);
+    pub fn hovered(&mut self, pos: Pos2) {
+        let border_in_cell = 1.0 / 15.0;
+
+        // Translate from f32 to f64
+        let x = pos.x as f64;
+        let y = pos.y as f64;
+
+        // Translate to scale from center and fetch cursor position
+        let width = self.cell_size * self.get_width() as f64 * self.scale;
+        let height = self.cell_size * self.get_height() as f64 * self.scale;
+        let cell_size = self.cell_size * self.scale;
+
+        // Coordinates of upper left angle of field
+        let offset_x = self.center_x - width / 2.0;
+        let offset_y = self.center_y - height / 2.0;
+        // x_pos and y_pos - for fetching current cell in [true.. false..] table
+        let x_pos = ((x - offset_x) / cell_size).floor();
+        let y_pos = ((y - offset_y) / cell_size).floor();
+        let x_full = offset_x + x_pos * cell_size;
+        let y_full = offset_y + y_pos * cell_size;
+        let pos_min = Point::new(
+            x_full + border_in_cell * cell_size,
+            y_full + border_in_cell * cell_size,
+        );
+        let pos_max = Point::new(
+            x_full + (1.0 - border_in_cell) * cell_size,
+            y_full + (1.0 - border_in_cell) * cell_size,
+        );
+
+        // For drawing (scales are applied by vello transform, not by maths)
+        // Actually, this all shit is used to fetch the cell is cursor on.
+        // dp - Drawn position
+        let dp_x_full = self.o + x_pos * self.cell_size;
+        let dp_y_full = self.i + y_pos * self.cell_size;
+        let dp_min = Point::new(
+            dp_x_full + self.cell_size * border_in_cell,
+            dp_y_full + self.cell_size * border_in_cell,
+        );
+        let dp_max = Point::new(
+            dp_x_full + self.cell_size * (1.0 - border_in_cell),
+            dp_y_full + self.cell_size * (1.0 - border_in_cell),
+        );
+
+        if 0f64 <= x_pos
+            && x_pos < self.get_width() as f64
+            && 0f64 <= y_pos
+            && y_pos < self.get_height() as f64
+        {
+            self.hovered = {
+                let border_in_cell = self.cell_size * border_in_cell;
+                if pos_min.x < x && x < pos_max.x && pos_min.y < y && y < pos_max.y {
+                    // info!("Cell ->");
+                    // info!("x: {x_pos} y: {y_pos}");
+                    Hovered::Cell {
+                        min: dp_min,
+                        max: dp_max,
+                        x: x_pos as usize,
+                        y: y_pos as usize,
+                    }
+                } else if x < pos_min.x {
+                    // info!("LeftBorder ->");
+                    // info!("x: {x_pos} y: {y_pos}");
+                    Hovered::VerticalBorder {
+                        min: Point::new(dp_x_full - border_in_cell, dp_y_full),
+                        max: Point::new(dp_x_full + border_in_cell, dp_y_full + self.cell_size),
+                        x: x_pos as usize,
+                        y: y_pos as usize,
+                    }
+                } else if y < pos_min.y {
+                    // info!("AboveBorder ->");
+                    // info!("x: {x_pos} y: {y_pos}");
+                    Hovered::HorizontalBorder {
+                        min: Point::new(dp_x_full, dp_y_full - border_in_cell),
+                        max: Point::new(dp_x_full + self.cell_size, dp_y_full + border_in_cell),
+                        x: x_pos as usize,
+                        y: y_pos as usize,
+                    }
+                } else if x > pos_max.x {
+                    // info!("RightBorder ->");
+                    // info!("x: {} y: {}", x_pos + 1.0, y_pos);
+                    Hovered::VerticalBorder {
+                        min: Point::new(dp_x_full + self.cell_size - border_in_cell, dp_y_full),
+                        max: Point::new(
+                            dp_x_full + self.cell_size + border_in_cell,
+                            dp_y_full + self.cell_size,
+                        ),
+                        x: x_pos as usize + 1,
+                        y: y_pos as usize,
+                    }
+                } else if y > pos_max.y {
+                    // info!("UnderBorder ->");
+                    // info!("x: {} y: {}", x_pos + 1.0, y_pos + 1.0);
+                    Hovered::HorizontalBorder {
+                        min: Point::new(dp_x_full, dp_y_full + self.cell_size - border_in_cell),
+                        max: Point::new(
+                            dp_x_full + self.cell_size,
+                            dp_y_full + self.cell_size + border_in_cell,
+                        ),
+                        x: x_pos as usize,
+                        y: y_pos as usize + 1,
+                    }
+                } else {
+                    Hovered::None
+                }
+            };
+        } else {
+            self.hovered = Hovered::None;
+        }
+    }
+
+    pub fn clicked(&mut self) {
+        info!("Clicked");
+        match self.hovered {
+            Hovered::Cell {
+                min: _,
+                max: _,
+                x,
+                y,
+            } => self.colored[x][y] = !self.colored[x][y],
+            Hovered::HorizontalBorder {
+                min: _,
+                max: _,
+                x,
+                y,
+            } => self.horizontal_borders[x][y] = !self.horizontal_borders[x][y],
+            Hovered::VerticalBorder {
+                min: _,
+                max: _,
+                x,
+                y,
+            } => self.vertical_borders[x][y] = !self.vertical_borders[x][y],
+            Hovered::None => (),
+        }
     }
 
     pub fn change_scale(&mut self, delta_scale: f64) {
-        #[cfg(unix)]
-        tracy_full::zone!("Change Scale", tracy_full::color::Color::CYAN, true);
-        if 0.1 < self.scale + delta_scale && self.scale + delta_scale < 10.0 {
+        // #[cfg(unix)]
+        // tracy_full::zone!("Change Scale", tracy_full::color::Color::CYAN, true);
+        if 0.3 < self.scale + delta_scale && self.scale + delta_scale < 3.0 {
             self.scale += delta_scale;
         }
     }
@@ -259,8 +453,8 @@ impl Robot {
     }
 
     pub fn add_row_from_up(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Add Row From Up", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Add Row From Up", tracy_full::color::Color::CYAN, true);
         for i in 0..=self.width {
             self.vertical_borders[i].insert(0, i == 0 || i == self.width);
         }
@@ -277,8 +471,8 @@ impl Robot {
     }
 
     pub fn remove_row_from_up(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Remove Row From Up", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Remove Row From Up", tracy_full::color::Color::CYAN, true);
         if self.change_height(-1, true) {
             for i in 0..=self.width {
                 self.vertical_borders[i].remove(0);
@@ -296,8 +490,8 @@ impl Robot {
     }
 
     pub fn add_row_from_down(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Add Row From Down", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Add Row From Down", tracy_full::color::Color::CYAN, true);
         for i in 0..=self.width {
             self.vertical_borders[i].push(i == 0 || i == self.width);
         }
@@ -313,8 +507,8 @@ impl Robot {
     }
 
     pub fn remove_row_from_down(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Remove Row From Down");
+        // #[cfg(unix)]
+        // tracy_full::zone!("Remove Row From Down");
         if self.change_height(-1, false) {
             for i in 0..=self.width {
                 self.vertical_borders[i].pop();
@@ -331,8 +525,8 @@ impl Robot {
     }
 
     pub fn add_column_from_left(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Add Column From Left", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Add Column From Left", tracy_full::color::Color::CYAN, true);
         let vertical_borders = vec![true; self.height];
         self.vertical_borders[0] = vec![false; self.height];
         self.vertical_borders.insert(0, vertical_borders);
@@ -348,12 +542,12 @@ impl Robot {
     }
 
     pub fn remove_column_from_left(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!(
-            "Remove Column From Left",
-            tracy_full::color::Color::CYAN,
-            true
-        );
+        // #[cfg(unix)]
+        // tracy_full::zone!(
+        //     "Remove Column From Left",
+        //     tracy_full::color::Color::CYAN,
+        //     true
+        // );
         if self.change_width(-1, true) {
             self.vertical_borders.remove(0);
             self.vertical_borders[0] = vec![true; self.height];
@@ -365,12 +559,12 @@ impl Robot {
     }
 
     pub fn add_column_from_right(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!(
-            "Add Column From Right",
-            tracy_full::color::Color::CYAN,
-            true
-        );
+        // #[cfg(unix)]
+        // tracy_full::zone!(
+        //     "Add Column From Right",
+        //     tracy_full::color::Color::CYAN,
+        //     true
+        // );
         let vertical_borders = vec![true; self.height];
         self.vertical_borders[self.width] = vec![false; self.height];
         self.vertical_borders.push(vertical_borders);
@@ -385,12 +579,12 @@ impl Robot {
     }
 
     pub fn remove_column_from_right(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!(
-            "Remove Column From Right",
-            tracy_full::color::Color::CYAN,
-            true
-        );
+        // #[cfg(unix)]
+        // tracy_full::zone!(
+        //     "Remove Column From Right",
+        //     tracy_full::color::Color::CYAN,
+        //     true
+        // );
         if self.change_width(-1, false) {
             self.vertical_borders.pop();
             self.vertical_borders[self.width] = vec![true; self.height];
@@ -405,8 +599,8 @@ impl Robot {
     }
 
     pub fn change_height(&mut self, delta_height: i64, from_up: bool) -> bool {
-        #[cfg(unix)]
-        tracy_full::zone!("Change Height", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Change Height", tracy_full::color::Color::CYAN, true);
         let new_height = self.height as i64 + delta_height;
         if new_height >= 1 && (self.y as i64 - 1 >= 0 || !from_up) {
             self.height = new_height as usize;
@@ -421,8 +615,8 @@ impl Robot {
     }
 
     pub fn change_width(&mut self, delta_width: i64, from_left: bool) -> bool {
-        #[cfg(unix)]
-        tracy_full::zone!("Change Width", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Change Width", tracy_full::color::Color::CYAN, true);
         let new_width = self.width as i64 + delta_width;
         if new_width >= 1 && (self.x as i64 - 1 >= 0 || !from_left) {
             self.width = new_width as usize;
@@ -433,8 +627,8 @@ impl Robot {
     }
 
     fn move_robot(&mut self, x: i64, y: i64) {
-        #[cfg(unix)]
-        tracy_full::zone!("Move Robot", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Move Robot", tracy_full::color::Color::CYAN, true);
         let new_x = self.x as i64 + x;
         let new_y = self.y as i64 + y;
         if new_x >= self.width as i64 {
@@ -454,63 +648,62 @@ impl Robot {
     }
 
     pub fn move_up(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Move Up", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Move Up", tracy_full::color::Color::CYAN, true);
         self.move_robot(0, -1);
     }
 
     pub fn move_down(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Move Down", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Move Down", tracy_full::color::Color::CYAN, true);
         self.move_robot(0, 1);
     }
 
     pub fn move_right(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Move Right", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Move Right", tracy_full::color::Color::CYAN, true);
         self.move_robot(1, 0);
-        info!("moved right");
     }
 
     pub fn move_left(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Move Left", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Move Left", tracy_full::color::Color::CYAN, true);
         self.move_robot(-1, 0);
     }
 
     pub fn color(&mut self) {
-        #[cfg(unix)]
-        tracy_full::zone!("Color Cell", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Color Cell", tracy_full::color::Color::CYAN, true);
         self.colored[self.x][self.y] = true;
     }
 
     pub fn is_colored(&self) -> bool {
-        #[cfg(unix)]
-        tracy_full::zone!("Check Colored", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Check Colored", tracy_full::color::Color::CYAN, true);
         self.colored[self.x][self.y]
     }
 
     pub fn from_above(&self) -> bool {
-        #[cfg(unix)]
-        tracy_full::zone!("Check Above", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Check Above", tracy_full::color::Color::CYAN, true);
         self.horizontal_borders[self.x][self.y]
     }
 
     pub fn from_below(&self) -> bool {
-        #[cfg(unix)]
-        tracy_full::zone!("Check Below", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Check Below", tracy_full::color::Color::CYAN, true);
         self.horizontal_borders[self.x][self.y + 1]
     }
 
     pub fn from_left(&self) -> bool {
-        #[cfg(unix)]
-        tracy_full::zone!("Check Left", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Check Left", tracy_full::color::Color::CYAN, true);
         self.vertical_borders[self.x][self.y]
     }
 
     pub fn from_right(&self) -> bool {
-        #[cfg(unix)]
-        tracy_full::zone!("Check Right", tracy_full::color::Color::CYAN, true);
+        // #[cfg(unix)]
+        // tracy_full::zone!("Check Right", tracy_full::color::Color::CYAN, true);
         self.vertical_borders[self.x + 1][self.y]
     }
 }
