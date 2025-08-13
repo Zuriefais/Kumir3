@@ -166,4 +166,11 @@ impl KumirState {
             _ => (),
         }
     }
+
+    pub fn click(&self) {
+        match self.selected_mode {
+            Modes::Robot => self.modes.robot.lock().unwrap().clicked(),
+            _ => (),
+        }
+    }
 }

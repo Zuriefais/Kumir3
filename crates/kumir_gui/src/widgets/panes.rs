@@ -164,10 +164,12 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                         vello_options.changed = true;
                     }
 
-                    let response = ui.image(SizedTexture {
-                        id: vello_options.texture,
-                        size: egui::Vec2::new(available_size.x, available_size.y),
-                    });
+                    let response = ui
+                        .image(SizedTexture {
+                            id: vello_options.texture,
+                            size: egui::Vec2::new(available_size.x, available_size.y),
+                        })
+                        .interact(Sense::click());
 
                     self.kumir_state.update_min_point(response.rect.min);
 
@@ -178,6 +180,10 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                             self.kumir_state.hover(input.pointer.hover_pos());
                             // println!("{:?}", input.pointer.hover_pos());
                         });
+                    }
+
+                    if response.clicked() {
+                        self.kumir_state.click();
                     }
                 }
             }

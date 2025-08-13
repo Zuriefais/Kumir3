@@ -24,11 +24,24 @@ pub struct RobotEditingState {
 }
 
 pub enum Hovered {
-    Cell { min: Point, max: Point },
-    LeftBorder { min: Point, max: Point },
-    RightBorder { min: Point, max: Point },
-    BorderAbove { min: Point, max: Point },
-    BorderUnder { min: Point, max: Point },
+    Cell {
+        min: Point,
+        max: Point,
+        x: usize,
+        y: usize,
+    },
+    VerticalBorder {
+        min: Point,
+        max: Point,
+        x: usize,
+        y: usize,
+    },
+    HorizontalBorder {
+        min: Point,
+        max: Point,
+        x: usize,
+        y: usize,
+    },
     None,
 }
 
@@ -232,11 +245,24 @@ impl Robot {
     pub fn draw_hovered(&self, scene: &mut Scene) {
         match self.hovered {
             Hovered::None => (),
-            Hovered::Cell { min, max }
-            | Hovered::LeftBorder { min, max }
-            | Hovered::RightBorder { min, max }
-            | Hovered::BorderAbove { min, max }
-            | Hovered::BorderUnder { min, max } => scene.fill(
+            Hovered::Cell {
+                min,
+                max,
+                x: _,
+                y: _,
+            }
+            | Hovered::HorizontalBorder {
+                min,
+                max,
+                x: _,
+                y: _,
+            }
+            | Hovered::VerticalBorder {
+                min,
+                max,
+                x: _,
+                y: _,
+            } => scene.fill(
                 vello::peniko::Fill::NonZero,
                 Affine::IDENTITY,
                 self.hovered_color,
@@ -280,70 +306,146 @@ impl Robot {
     }
 
     pub fn hovered(&mut self, pos: Pos2) {
+        let border_in_cell = 1.0 / 15.0;
+
+        // Translate from f32 to f64
         let x = pos.x as f64;
         let y = pos.y as f64;
-        let x_full = ((x - self.o) / self.cell_size).floor() * self.cell_size + self.o;
-        let y_full = ((y - self.i) / self.cell_size).floor() * self.cell_size + self.i;
 
-        let border_in_cell = self.cell_size / 15.0;
+        // Translate to scale from center and fetch cursor position
+        let width = self.cell_size * self.get_width() as f64 * self.scale;
+        let height = self.cell_size * self.get_height() as f64 * self.scale;
+        let cell_size = self.cell_size * self.scale;
 
-        let pos_min = Point::new(x_full + border_in_cell, y_full + border_in_cell);
+        // Coordinates of upper left angle of field
+        let offset_x = self.center_x - width / 2.0;
+        let offset_y = self.center_y - height / 2.0;
+        // x_pos and y_pos - for fetching current cell in [true.. false..] table
+        let x_pos = ((x - offset_x) / cell_size).floor();
+        let y_pos = ((y - offset_y) / cell_size).floor();
+        let x_full = offset_x + x_pos * cell_size;
+        let y_full = offset_y + y_pos * cell_size;
+        let pos_min = Point::new(
+            x_full + border_in_cell * cell_size,
+            y_full + border_in_cell * cell_size,
+        );
         let pos_max = Point::new(
-            x_full + self.cell_size - border_in_cell,
-            y_full + self.cell_size - border_in_cell,
+            x_full + (1.0 - border_in_cell) * cell_size,
+            y_full + (1.0 - border_in_cell) * cell_size,
         );
 
-        if self.o <= x
-            && x <= self.o + self.cell_size * self.get_width() as f64
-            && self.i <= y
-            && y <= self.i + self.cell_size * self.get_height() as f64
+        // For drawing (scales are applied by vello transform, not by maths)
+        // Actually, this all shit is used to fetch the cell is cursor on.
+        // dp - Drawn position
+        let dp_x_full = self.o + x_pos * self.cell_size;
+        let dp_y_full = self.i + y_pos * self.cell_size;
+        let dp_min = Point::new(
+            dp_x_full + self.cell_size * border_in_cell,
+            dp_y_full + self.cell_size * border_in_cell,
+        );
+        let dp_max = Point::new(
+            dp_x_full + self.cell_size * (1.0 - border_in_cell),
+            dp_y_full + self.cell_size * (1.0 - border_in_cell),
+        );
+
+        if 0f64 <= x_pos
+            && x_pos < self.get_width() as f64
+            && 0f64 <= y_pos
+            && y_pos < self.get_height() as f64
         {
             self.hovered = {
+                let border_in_cell = self.cell_size * border_in_cell;
                 if pos_min.x < x && x < pos_max.x && pos_min.y < y && y < pos_max.y {
+                    // info!("Cell ->");
+                    // info!("x: {x_pos} y: {y_pos}");
                     Hovered::Cell {
-                        min: pos_min,
-                        max: pos_max,
+                        min: dp_min,
+                        max: dp_max,
+                        x: x_pos as usize,
+                        y: y_pos as usize,
                     }
                 } else if x < pos_min.x {
-                    Hovered::LeftBorder {
-                        min: Point::new(x_full - border_in_cell, y_full),
-                        max: Point::new(x_full + border_in_cell, y_full + self.cell_size),
+                    // info!("LeftBorder ->");
+                    // info!("x: {x_pos} y: {y_pos}");
+                    Hovered::VerticalBorder {
+                        min: Point::new(dp_x_full - border_in_cell, dp_y_full),
+                        max: Point::new(dp_x_full + border_in_cell, dp_y_full + self.cell_size),
+                        x: x_pos as usize,
+                        y: y_pos as usize,
                     }
                 } else if y < pos_min.y {
-                    Hovered::BorderAbove {
-                        min: Point::new(x_full, y_full - border_in_cell),
-                        max: Point::new(x_full + self.cell_size, y_full + border_in_cell),
+                    // info!("AboveBorder ->");
+                    // info!("x: {x_pos} y: {y_pos}");
+                    Hovered::HorizontalBorder {
+                        min: Point::new(dp_x_full, dp_y_full - border_in_cell),
+                        max: Point::new(dp_x_full + self.cell_size, dp_y_full + border_in_cell),
+                        x: x_pos as usize,
+                        y: y_pos as usize,
                     }
                 } else if x > pos_max.x {
-                    Hovered::RightBorder {
-                        min: Point::new(x_full + self.cell_size - border_in_cell, y_full),
+                    // info!("RightBorder ->");
+                    // info!("x: {} y: {}", x_pos + 1.0, y_pos);
+                    Hovered::VerticalBorder {
+                        min: Point::new(dp_x_full + self.cell_size - border_in_cell, dp_y_full),
                         max: Point::new(
-                            x_full + self.cell_size + border_in_cell,
-                            y_full + self.cell_size,
+                            dp_x_full + self.cell_size + border_in_cell,
+                            dp_y_full + self.cell_size,
                         ),
+                        x: x_pos as usize + 1,
+                        y: y_pos as usize,
                     }
                 } else if y > pos_max.y {
-                    Hovered::BorderUnder {
-                        min: Point::new(x_full, y_full + self.cell_size - border_in_cell),
+                    // info!("UnderBorder ->");
+                    // info!("x: {} y: {}", x_pos + 1.0, y_pos + 1.0);
+                    Hovered::HorizontalBorder {
+                        min: Point::new(dp_x_full, dp_y_full + self.cell_size - border_in_cell),
                         max: Point::new(
-                            x_full + self.cell_size,
-                            y_full + self.cell_size + border_in_cell,
+                            dp_x_full + self.cell_size,
+                            dp_y_full + self.cell_size + border_in_cell,
                         ),
+                        x: x_pos as usize,
+                        y: y_pos as usize + 1,
                     }
                 } else {
                     Hovered::None
                 }
             };
+        } else {
+            self.hovered = Hovered::None;
+        }
+    }
+
+    pub fn clicked(&mut self) {
+        info!("Clicked");
+        match self.hovered {
+            Hovered::Cell {
+                min: _,
+                max: _,
+                x,
+                y,
+            } => self.colored[x][y] = !self.colored[x][y],
+            Hovered::HorizontalBorder {
+                min: _,
+                max: _,
+                x,
+                y,
+            } => self.horizontal_borders[x][y] = !self.horizontal_borders[x][y],
+            Hovered::VerticalBorder {
+                min: _,
+                max: _,
+                x,
+                y,
+            } => self.vertical_borders[x][y] = !self.vertical_borders[x][y],
+            Hovered::None => (),
         }
     }
 
     pub fn change_scale(&mut self, delta_scale: f64) {
         // #[cfg(unix)]
         // tracy_full::zone!("Change Scale", tracy_full::color::Color::CYAN, true);
-        if 0.1 < self.scale + delta_scale && self.scale + delta_scale < 10.0 {
+        if 0.3 < self.scale + delta_scale && self.scale + delta_scale < 3.0 {
             self.scale += delta_scale;
         }
-        // info!("Scale: {}", self.scale);
     }
 
     pub fn get_scale(&self) -> f64 {
