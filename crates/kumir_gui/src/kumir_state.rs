@@ -1,8 +1,9 @@
 use crate::executors::robot::{ColumnsMode, Robot, RobotEditingState, RowsMode};
+use crate::executors::{Executor, NoneSelected};
 use egui::Pos2;
 use log::info;
 use std::fmt;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time;
 use vello::Scene;
 use vello::peniko::Color;
@@ -32,7 +33,8 @@ impl fmt::Display for Modes {
 }
 
 pub struct ModesStored {
-    pub robot: Arc<Mutex<Robot>>,
+    pub robot: Arc<Mutex<dyn Executor>>,
+    pub none: Arc<Mutex<dyn Executor>>,
 }
 
 pub struct EditingStates {
@@ -57,19 +59,22 @@ pub struct KumirState {
 
 impl KumirState {
     pub fn new(scene: Arc<Mutex<Scene>>, width: f64, height: f64) -> KumirState {
+        let rob = Arc::new(Mutex::new(Robot::new(
+            9,
+            9,
+            100.0,
+            width / 2.0,
+            height / 2.0,
+        )));
+        let none = Arc::new(Mutex::new(NoneSelected::new()));
         KumirState {
             scene: scene,
             width: width,
             height: height,
             selected_mode: Modes::None,
             modes: ModesStored {
-                robot: Arc::new(Mutex::new(Robot::new(
-                    9,
-                    9,
-                    100.0,
-                    width / 2.0,
-                    height / 2.0,
-                ))),
+                robot: rob,
+                none: none,
             },
             editing_states: EditingStates {
                 robot: RobotEditingState {
@@ -82,21 +87,16 @@ impl KumirState {
         }
     }
 
-    pub fn add_shapes_to_scene(&mut self) {
+    pub fn current_mode(&self) -> MutexGuard<'_, dyn Executor> {
         match self.selected_mode {
-            // Modes::None => todo!(),
-            // Modes::Kuznechik => todo!(),
-            // Modes::Vodolei => todo!(),
-            // Modes::Cherepaha => todo!(),
-            // Modes::Chertezhnik => todo!(),
-            Modes::Robot => self
-                .modes
-                .robot
-                .lock()
-                .unwrap()
-                .draw_field(&mut self.scene.lock().unwrap()),
-            _ => (),
+            Modes::Robot => self.modes.robot.lock().unwrap(),
+            _ => self.modes.none.lock().unwrap(),
         }
+    }
+
+    pub fn add_shapes_to_scene(&mut self) {
+        self.current_mode()
+            .draw_field(&mut self.scene.lock().unwrap());
     }
 
     pub fn update_transform(&mut self, width: f64, height: f64) {
@@ -104,25 +104,10 @@ impl KumirState {
             .robot
             .lock()
             .unwrap()
-            .update_centers(width, height);
+            .update_transform(width, height);
     }
 
-    pub fn run(&mut self) {
-        let rob = Arc::clone(&self.modes.robot);
-        info!("run");
-
-        thread::spawn(move || {
-            rob.lock().unwrap().move_right();
-            thread::sleep(time::Duration::from_millis(1000));
-            rob.lock().unwrap().move_left();
-        });
-    }
-
-    pub fn change_offset(&mut self, o: f32, i: f32) {
-        match self.selected_mode {
-            _ => (),
-        }
-    }
+    pub fn run(&mut self) {}
 
     pub fn update_min_point(&mut self, pos: Pos2) {
         if self.min_point != pos {
@@ -131,24 +116,15 @@ impl KumirState {
     }
 
     pub fn change_scale(&mut self, scale_delta: f64) {
-        match self.selected_mode {
-            Modes::Robot => self.modes.robot.lock().unwrap().change_scale(scale_delta),
-            _ => (),
-        }
+        self.current_mode().change_scale(scale_delta);
     }
 
     pub fn get_scale(&self) -> f64 {
-        match self.selected_mode {
-            Modes::Robot => self.modes.robot.lock().unwrap().get_scale(),
-            _ => 1.0,
-        }
+        self.current_mode().get_scale()
     }
 
     pub fn base_color(&self) -> Color {
-        match self.selected_mode {
-            Modes::Robot => self.modes.robot.lock().unwrap().base_color(),
-            _ => Color::from_rgb8(0, 0, 0),
-        }
+        self.current_mode().base_color()
     }
 
     pub fn hover(&self, pos: Option<Pos2>) {
@@ -156,21 +132,11 @@ impl KumirState {
             return;
         }
 
-        match self.selected_mode {
-            Modes::Robot => self
-                .modes
-                .robot
-                .lock()
-                .unwrap()
-                .hovered((pos.unwrap() - self.min_point).to_pos2()),
-            _ => (),
-        }
+        self.current_mode()
+            .hovered((pos.unwrap() - self.min_point).to_pos2());
     }
 
     pub fn click(&self) {
-        match self.selected_mode {
-            Modes::Robot => self.modes.robot.lock().unwrap().clicked(),
-            _ => (),
-        }
+        self.current_mode().clicked();
     }
 }

@@ -1,17 +1,46 @@
 use egui::Pos2;
-use vello::Scene;
+use vello::{Scene, peniko::Color};
 pub mod robot;
+use crate::kumir_state::Modes;
+use std::any::Any;
 
-pub trait Executor {
+pub trait Executor: Any {
     fn clear_field(&self, scene: &mut Scene);
-    fn draw_field(&self, scene: &mut Scene);
-    fn base_color(&self);
+    fn draw_field(&mut self, scene: &mut Scene);
+    fn base_color(&self) -> Color;
     fn change_scale(&mut self, delta_scale: f64);
     fn get_scale(&self) -> f64;
     fn hovered(&mut self, pos: Pos2);
-    fn clicked(&mut self, pos: Pos2);
+    fn clicked(&mut self);
+    fn update_transform(&mut self, width: f64, height: f64);
 }
 
+impl dyn Executor {
+    pub fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+pub struct NoneSelected {}
+impl NoneSelected {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+impl Executor for NoneSelected {
+    fn clear_field(&self, scene: &mut Scene) {}
+    fn draw_field(&mut self, scene: &mut Scene) {}
+    fn base_color(&self) -> Color {
+        Color::BLACK
+    }
+    fn change_scale(&mut self, delta_scale: f64) {}
+    fn get_scale(&self) -> f64 {
+        0.0
+    }
+    fn hovered(&mut self, pos: Pos2) {}
+    fn clicked(&mut self) {}
+    fn update_transform(&mut self, width: f64, height: f64) {}
+}
 // pub fn add_shapes_to_scene(scene: &mut Scene, width: u32, height: u32) {
 //     let rob = Robot::new(9, 9, 100.0);
 //     rob.draw_field(scene);
