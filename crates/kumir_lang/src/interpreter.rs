@@ -1,7 +1,7 @@
 use log::info;
 
 use crate::{
-    ast::{AstNode, Environment, Parser},
+    ast::{AstNode, Environment, Parser, Stmt},
     lexer::{Lexer, Token},
 };
 
@@ -12,12 +12,23 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn run(&mut self) -> Result<(), String> {
+        self.register_functions();
         match self.ast.eval(&mut self.environment) {
-            Ok(()) => {
-                info!("Все ок!!");
+            Ok(_) => {
+                info!("Program finished successfully");
                 Ok(())
             }
-            Err(e) => Err(format!("Ошибка выполнения: {e}")),
+            Err(e) => Err(format!("Runtime error: {e}")),
+        }
+    }
+
+    pub fn register_functions(&mut self) {
+        if let AstNode::Program(body) = &self.ast {
+            for stmt in body {
+                if let Stmt::Alg(alg) = stmt {
+                    self.environment.register_function(&alg.name, alg.clone());
+                }
+            }
         }
     }
 

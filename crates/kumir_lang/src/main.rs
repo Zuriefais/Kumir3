@@ -36,7 +36,7 @@ fn main() {
 
             info!("Interpreter result: {:?}", interpreter.run());
 
-            info!("Interpreter environment: {:?}", interpreter.environment);
+            info!("Interpreter environment: {:#?}", interpreter.environment);
         }
         Err(err) => {
             let (statements, err) = err;

@@ -12,7 +12,6 @@ use crate::lexer::{
 pub enum AstNode {
     Program(Vec<Stmt>),
     Stmt(Stmt),
-    Expr(Expr),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -30,12 +29,7 @@ pub enum Stmt {
         name: String,
         value: Expr,
     },
-    Alg {
-        name: String,
-        body: Vec<Stmt>,
-        params: Vec<FunctionParameter>,
-        return_type: Option<TypeDefinition>,
-    },
+    Alg(Function),
     Condition {
         condition: Expr,
         left: Vec<Stmt>,
@@ -49,12 +43,12 @@ pub enum Stmt {
         var: String,
         start: Expr,
         end: Expr,
-        body: Vec<Stmt>,
+        body: Box<AstNode>,
     },
     Repeat {
         condition: Option<Expr>,
         count: Expr,
-        body: Vec<Stmt>,
+        body: Box<AstNode>,
     },
     Output {
         values: Vec<Expr>,
@@ -74,7 +68,8 @@ pub enum Expr {
 #[derive(Debug, PartialEq, Clone)]
 pub struct FunctionCall {
     pub name: String,
-    pub args: Vec<Expr>,
+    //Name and Value
+    pub args: Vec<(String, Expr)>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -296,7 +291,7 @@ impl Parser {
             var,
             start,
             end,
-            body: statements,
+            body: Box::new(AstNode::Program(statements)),
         })
     }
 
@@ -311,7 +306,7 @@ impl Parser {
         Ok(Stmt::Repeat {
             condition: None,
             count,
-            body: statements,
+            body: Box::new(AstNode::Program(statements)),
         })
     }
 
@@ -411,6 +406,14 @@ impl Parser {
             params, self.position
         );
 
+        self.expect(Token::Delimiter(Delimiter::ParenthesisClose))?;
+
+        if self.check(&Token::Keyword(Keyword::Function(lexer::Function::Expects))) {
+            //skip Expects token
+            self.advance();
+            todo!("Parse alg expects token")
+        }
+
         self.expect(Token::Keyword(Keyword::Function(lexer::Function::Start)))?;
 
         let mut body = Vec::new();
@@ -420,60 +423,12 @@ impl Parser {
             body.push(self.parse_stmt()?);
         }
         self.expect(Token::Keyword(Keyword::Function(lexer::Function::Stop)))?;
-        Ok(Stmt::Alg {
+        Ok(Stmt::Alg(Function {
             name,
             body,
             return_type,
             params,
-        })
-    }
-    fn collect_params(
-        &mut self,
-        result_type: &FunctionParamType,
-    ) -> Result<Vec<FunctionParameter>, String> {
-        let mut params = vec![];
-        let type_definition = {
-            if let Token::Keyword(Keyword::TypeDef(type_def)) = *self.current_token() {
-                self.advance();
-                type_def
-            } else {
-                return Err(format!(
-                    "Couldn't collect function params expected type def found {:?}",
-                    self.current_token()
-                ));
-            }
-        };
-        let identifier = {
-            if let Token::Identifier(identifier) = self.current_token() {
-                identifier
-            } else {
-                return Err(format!(
-                    "Couldn't collect function params expected identifier found {:?}",
-                    self.current_token()
-                ));
-            }
-        };
-        params.push(FunctionParameter {
-            name: identifier.clone(),
-            type_definition,
-            result_type: *result_type,
-        });
-        self.expect(Token::Delimiter(Delimiter::Comma));
-        while let Token::Identifier(identifier) = self.current_token().clone() {
-            params.push(FunctionParameter {
-                name: identifier.clone(),
-                type_definition,
-                result_type: *result_type,
-            });
-            //Skip identifier token
-            self.advance();
-            if *self.current_token() != Token::Delimiter(Delimiter::Comma) {
-                break;
-            }
-            //Skip comma token
-            self.advance();
-        }
-        Ok(params)
+        }))
     }
 
     fn parse_var_decl(&mut self, type_def: &TypeDefinition) -> Result<Stmt, String> {
@@ -635,19 +590,20 @@ impl Parser {
 }
 
 impl AstNode {
-    pub fn eval(&self, environment: &mut Environment) -> Result<(), String> {
+    pub fn eval(&self, environment: &mut Environment) -> Result<EvalResult, String> {
         match self {
-            AstNode::Program(stmts) => {
-                for stmt in stmts {
-                    stmt.eval(environment)?;
+            AstNode::Program(body) => {
+                for stmt in body {
+                    let eval_result = stmt.eval(environment)?;
+                    match eval_result {
+                        EvalResult::Normal => {}
+                        EvalResult::Return(literal) => return Ok(EvalResult::Return(literal)),
+                        EvalResult::Break => return Ok(EvalResult::Break),
+                    }
                 }
-                Ok(())
+                Ok(EvalResult::Normal)
             }
-            AstNode::Stmt(stmt) => {
-                stmt.eval(environment)?;
-                Ok(())
-            }
-            AstNode::Expr(_) => Err("Program couldn't exit with only expr".to_string()),
+            AstNode::Stmt(stmt) => stmt.eval(environment),
         }
     }
 }
@@ -679,12 +635,7 @@ impl Stmt {
                 let value = value.eval(environment)?;
                 environment.assign_var(name, value);
             }
-            Stmt::Alg {
-                name,
-                body,
-                params,
-                return_type,
-            } => todo!(),
+            Stmt::Alg(_) => {}
             Stmt::Condition {
                 condition,
                 left,
@@ -737,7 +688,7 @@ impl Stmt {
                         false
                     }
                 } {
-                    if EvalResult::Break == execute_body(body, environment)? {
+                    if EvalResult::Break == body.eval(environment)? {
                         break;
                     };
                     if let Some(Literal::Int(i)) = environment.get_value(var) {
@@ -756,7 +707,7 @@ impl Stmt {
                     return Err(format!("{count:?} must be an integer value in loop"));
                 };
                 loop {
-                    if EvalResult::Break == execute_body(body, environment)? {
+                    if EvalResult::Break == body.eval(environment)? {
                         break;
                     };
                     if times == 0 {
@@ -922,43 +873,31 @@ impl Expr {
             }
             Expr::BinaryOp(binary_op) => binary_op.eval(environment),
             Expr::NewLine => return Err(format!("New line couldn't be Literal")),
-            Expr::FunctionCall(call) => {
-                let mut params_literals = vec![];
-                for param in call.args.iter() {
-                    params_literals.push(param.eval(environment)?);
-                }
-                let function = environment
-                    .get_function(&call.name)
-                    .ok_or(format!("Function with name {} not found", &call.name))?
-                    .clone();
-                check_params(
-                    &function
-                        .params
-                        .iter()
-                        .map(|param| param.1)
-                        .collect::<Vec<TypeDefinition>>(),
-                    &params_literals
-                        .iter()
-                        .map(|param| param.get_type())
-                        .collect::<Vec<TypeDefinition>>(),
-                )?;
-                for (value, name) in params_literals
-                    .iter()
-                    .zip(function.params.iter().map(|param| param.0.clone()))
-                {
-                    environment.assign_var(&name, value.clone());
-                }
-                if let EvalResult::Return(value) = execute_body(&function.body, environment)? {
-                    return Ok(value);
-                }
-                for name in function.params.iter().map(|param| param.0.clone()) {
-                    environment.remove_var(&name)?;
-                }
-
-                todo!()
-            }
+            Expr::FunctionCall(call) => function_call(call, environment),
         }
     }
+}
+
+fn function_call(call: &FunctionCall, environment: &mut Environment) -> Result<Literal, String> {
+    let scope = Environment::new();
+
+    let function: Function = environment
+        .get_function(&call.name)
+        .ok_or(format!(
+            "Could't call undefined function with name {}",
+            &call.name
+        ))?
+        .clone();
+
+    for param in function.params {
+        match param.result_type {
+            FunctionParamType::Normal => todo!(),
+            FunctionParamType::ResultParam => todo!(),
+            FunctionParamType::ArgumentParam => todo!(),
+            FunctionParamType::ArgumentResultParam => todo!(),
+        }
+    }
+    todo!()
 }
 
 fn check_params(params: &[TypeDefinition], params1: &[TypeDefinition]) -> Result<(), String> {
@@ -977,8 +916,10 @@ fn check_params(params: &[TypeDefinition], params1: &[TypeDefinition]) -> Result
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Function {
-    params: Vec<(String, TypeDefinition)>,
-    body: Vec<Stmt>,
+    pub name: String,
+    pub body: Vec<Stmt>,
+    pub params: Vec<FunctionParameter>,
+    pub return_type: Option<TypeDefinition>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -1049,7 +990,7 @@ impl Environment {
             .ok_or_else(|| format!("No such variable exists"))
     }
 
-    fn register_function(&mut self, name: &str, function: Function) {
+    pub fn register_function(&mut self, name: &str, function: Function) {
         self.functions.insert(name.to_string(), function);
     }
 
