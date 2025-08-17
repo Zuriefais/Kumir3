@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use crate::kumir_state::{EditingStates, KumirState, Modes, ModesStored};
+use crate::kumir_state::{KumirState, Modes, ModesStored};
 use crate::widgets::panes::{
     IDEWindowOptions, Pane, TreeBehavior, VelloWindowOptions, create_tree,
 };
@@ -36,18 +36,12 @@ impl KumirGui {
         egui::TopBottomPanel::top("tools").show(&self.egui_context, |ui| {
             ui.horizontal(|ui| {
                 UsageDiagnostics {}.ui(ui);
-                if ui
-                    .add(egui::Button::new("Запустить").frame(false))
-                    .clicked()
-                {
+                if ui.add(egui::Button::new("Запустить")).clicked() {
                     self.kumir_state.run();
                     info!("Something should run");
                 }
 
-                if ui
-                    .add(egui::Button::new("Остановить").frame(false))
-                    .clicked()
-                {
+                if ui.add(egui::Button::new("Остановить")).clicked() {
                     info!("Something should stop");
                 }
 

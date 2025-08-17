@@ -21,7 +21,7 @@ impl dyn Executor {
     }
 }
 
-pub struct NoneSelected {}
+pub struct NoneSelected;
 impl NoneSelected {
     pub fn new() -> Self {
         Self {}

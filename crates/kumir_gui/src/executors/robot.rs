@@ -47,6 +47,17 @@ pub enum Hovered {
     None,
 }
 
+struct FieldParameters {
+    fill_color: Color,
+    grid_color: Color,
+    stroke_active: Stroke,
+    storke_inactive: Stroke,
+    cell_color: Color,
+    robot_color: Color,
+    robot_border_color: Color,
+    hovered_color: Color,
+}
+
 pub struct Robot {
     width: usize,
     height: usize,
@@ -58,18 +69,13 @@ pub struct Robot {
     vertical_borders: Vec<Vec<bool>>,
     horizontal_borders: Vec<Vec<bool>>,
     colored: Vec<Vec<bool>>,
-    fill_color: Color,
-    grid_color: Color,
-    stroke_active: Stroke,
-    storke_inactive: Stroke,
-    cell_color: Color,
-    robot_color: Color,
-    robot_border_color: Color,
-    hovered_color: Color,
     x: usize,
     y: usize,
     scale: f64,
     hovered: Hovered,
+    field_parameters: FieldParameters,
+
+    pub editing_state: RobotEditingState,
 }
 
 impl Robot {
@@ -98,14 +104,6 @@ impl Robot {
             },
             colored: vec![vec![false; height]; width],
             // fill_color: Color::from_rgb8(39, 143, 40),
-            fill_color: css::DARK_GREEN,
-            grid_color: Color::from_rgb8(200, 200, 16),
-            stroke_active: Stroke::new(6.0),
-            storke_inactive: Stroke::new(2.0),
-            cell_color: Color::from_rgb8(147, 112, 219),
-            robot_color: Color::from_rgb8(255, 255, 255),
-            robot_border_color: Color::from_rgb8(0, 0, 0),
-            hovered_color: css::BLUE_VIOLET,
             x: 0,
             y: 0,
             o: 0f64,
@@ -114,6 +112,20 @@ impl Robot {
             center_y: center_y,
             scale: 1.0,
             hovered: Hovered::None,
+            editing_state: RobotEditingState {
+                deleting_rows_mode: RowsMode::FromDown,
+                deleting_columns_mode: ColumnsMode::FromRight,
+            },
+            field_parameters: FieldParameters {
+                fill_color: css::DARK_GREEN,
+                grid_color: Color::from_rgb8(200, 200, 16),
+                stroke_active: Stroke::new(6.0),
+                storke_inactive: Stroke::new(2.0),
+                cell_color: Color::from_rgb8(147, 112, 219),
+                robot_color: Color::from_rgb8(255, 255, 255),
+                robot_border_color: Color::from_rgb8(0, 0, 0),
+                hovered_color: css::BLUE_VIOLET,
+            },
         }
     }
 
@@ -126,7 +138,7 @@ impl Robot {
                     scene.fill(
                         vello::peniko::Fill::NonZero,
                         Affine::IDENTITY,
-                        self.cell_color,
+                        self.field_parameters.cell_color,
                         None,
                         &Rect::from_origin_size(
                             (
@@ -155,16 +167,16 @@ impl Robot {
                 if x < self.width {
                     match self.horizontal_borders[x][y] {
                         true => scene.stroke(
-                            &self.stroke_active,
+                            &self.field_parameters.stroke_active,
                             Affine::IDENTITY,
-                            self.grid_color,
+                            self.field_parameters.grid_color,
                             None,
                             &horizontal_line,
                         ),
                         false => scene.stroke(
-                            &self.storke_inactive,
+                            &self.field_parameters.storke_inactive,
                             Affine::IDENTITY,
-                            self.grid_color,
+                            self.field_parameters.grid_color,
                             None,
                             &horizontal_line,
                         ),
@@ -175,16 +187,16 @@ impl Robot {
                 if y < self.height {
                     match self.vertical_borders[x][y] {
                         true => scene.stroke(
-                            &self.stroke_active,
+                            &self.field_parameters.stroke_active,
                             Affine::IDENTITY,
-                            self.grid_color,
+                            self.field_parameters.grid_color,
                             None,
                             &vertical_line,
                         ),
                         false => scene.stroke(
-                            &self.storke_inactive,
+                            &self.field_parameters.storke_inactive,
                             Affine::IDENTITY,
-                            self.grid_color,
+                            self.field_parameters.grid_color,
                             None,
                             &vertical_line,
                         ),
@@ -212,7 +224,7 @@ impl Robot {
         scene.fill(
             vello::peniko::Fill::NonZero,
             transform,
-            self.robot_color,
+            self.field_parameters.robot_color,
             None,
             &robot_shape,
         );
@@ -249,7 +261,7 @@ impl Robot {
             } => scene.fill(
                 vello::peniko::Fill::NonZero,
                 Affine::IDENTITY,
-                self.hovered_color,
+                self.field_parameters.hovered_color,
                 None,
                 &Rect::from_points(min, max),
             ),
@@ -450,66 +462,6 @@ impl Robot {
             self.y = new_y as usize;
         }
     }
-
-    pub fn move_up(&mut self) {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Move Up", tracy_full::color::Color::CYAN, true);
-        self.move_robot(0, -1);
-    }
-
-    pub fn move_down(&mut self) {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Move Down", tracy_full::color::Color::CYAN, true);
-        self.move_robot(0, 1);
-    }
-
-    pub fn move_right(&mut self) {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Move Right", tracy_full::color::Color::CYAN, true);
-        self.move_robot(1, 0);
-    }
-
-    pub fn move_left(&mut self) {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Move Left", tracy_full::color::Color::CYAN, true);
-        self.move_robot(-1, 0);
-    }
-
-    pub fn color(&mut self) {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Color Cell", tracy_full::color::Color::CYAN, true);
-        self.colored[self.x][self.y] = true;
-    }
-
-    pub fn is_colored(&self) -> bool {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Check Colored", tracy_full::color::Color::CYAN, true);
-        self.colored[self.x][self.y]
-    }
-
-    pub fn from_above(&self) -> bool {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Check Above", tracy_full::color::Color::CYAN, true);
-        self.horizontal_borders[self.x][self.y]
-    }
-
-    pub fn from_below(&self) -> bool {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Check Below", tracy_full::color::Color::CYAN, true);
-        self.horizontal_borders[self.x][self.y + 1]
-    }
-
-    pub fn from_left(&self) -> bool {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Check Left", tracy_full::color::Color::CYAN, true);
-        self.vertical_borders[self.x][self.y]
-    }
-
-    pub fn from_right(&self) -> bool {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Check Right", tracy_full::color::Color::CYAN, true);
-        self.vertical_borders[self.x + 1][self.y]
-    }
 }
 
 impl Executor for Robot {
@@ -519,7 +471,7 @@ impl Executor for Robot {
         scene.fill(
             vello::peniko::Fill::NonZero,
             Affine::IDENTITY,
-            self.fill_color,
+            self.field_parameters.fill_color,
             None,
             &Rect::from_origin_size(
                 (self.o, self.i),
@@ -550,7 +502,7 @@ impl Executor for Robot {
     }
 
     fn base_color(&self) -> Color {
-        self.fill_color
+        self.field_parameters.fill_color
     }
 
     fn change_scale(&mut self, delta_scale: f64) {
@@ -709,5 +661,93 @@ impl Executor for Robot {
             "Updates centers and offsets: x: {} y: {}",
             self.center_x, self.center_y
         );
+    }
+}
+
+pub struct RobotApi {
+    robot: Arc<Mutex<Robot>>,
+}
+
+impl RobotApi {
+    pub fn new(robot: Arc<Mutex<Robot>>) -> Self {
+        Self { robot: robot }
+    }
+
+    pub fn move_up(&mut self) {
+        // #[cfg(unix)]
+        // tracy_full::zone!("Move Up", tracy_full::color::Color::CYAN, true);
+        self.robot.lock().unwrap().move_robot(0, -1);
+    }
+
+    pub fn move_down(&mut self) {
+        // #[cfg(unix)]
+        // tracy_full::zone!("Move Down", tracy_full::color::Color::CYAN, true);
+        self.robot.lock().unwrap().move_robot(0, 1);
+    }
+
+    pub fn move_right(&mut self) {
+        // #[cfg(unix)]
+        // tracy_full::zone!("Move Right", tracy_full::color::Color::CYAN, true);
+        self.robot.lock().unwrap().move_robot(1, 0);
+    }
+
+    pub fn move_left(&mut self) {
+        // #[cfg(unix)]
+        // tracy_full::zone!("Move Left", tracy_full::color::Color::CYAN, true);
+        self.robot.lock().unwrap().move_robot(-1, 0);
+    }
+
+    pub fn color(&mut self) {
+        // #[cfg(unix)]
+        // tracy_full::zone!("Color Cell", tracy_full::color::Color::CYAN, true);
+        let mut rob = self.robot.lock().unwrap();
+        let x = rob.x;
+        let y = rob.y;
+        rob.colored[x][y] = true;
+    }
+
+    pub fn is_colored(&self) -> bool {
+        // #[cfg(unix)]
+        // tracy_full::zone!("Check Colored", tracy_full::color::Color::CYAN, true);
+        let rob = self.robot.lock().unwrap();
+        let x = rob.x;
+        let y = rob.y;
+        rob.colored[x][y]
+    }
+
+    pub fn from_above(&self) -> bool {
+        // #[cfg(unix)]
+        // tracy_full::zone!("Check Above", tracy_full::color::Color::CYAN, true);
+        let rob = self.robot.lock().unwrap();
+        let x = rob.x;
+        let y = rob.y;
+        rob.horizontal_borders[x][y]
+    }
+
+    pub fn from_below(&self) -> bool {
+        // #[cfg(unix)]
+        // tracy_full::zone!("Check Below", tracy_full::color::Color::CYAN, true);
+        let rob = self.robot.lock().unwrap();
+        let x = rob.x;
+        let y = rob.y;
+        rob.horizontal_borders[x][y + 1]
+    }
+
+    pub fn from_left(&self) -> bool {
+        // #[cfg(unix)]
+        // tracy_full::zone!("Check Left", tracy_full::color::Color::CYAN, true);
+        let rob = self.robot.lock().unwrap();
+        let x = rob.x;
+        let y = rob.y;
+        rob.vertical_borders[x][y]
+    }
+
+    pub fn from_right(&self) -> bool {
+        // #[cfg(unix)]
+        // tracy_full::zone!("Check Right", tracy_full::color::Color::CYAN, true);
+        let rob = self.robot.lock().unwrap();
+        let x = rob.x;
+        let y = rob.y;
+        rob.vertical_borders[x + 1][y]
     }
 }

@@ -37,10 +37,6 @@ pub struct ModesStored {
     pub none: Arc<Mutex<dyn Executor>>,
 }
 
-pub struct EditingStates {
-    pub robot: RobotEditingState,
-}
-
 pub enum VisualMode {
     Dark,
     Light,
@@ -52,7 +48,6 @@ pub struct KumirState {
     pub height: f64,
     pub selected_mode: Modes,
     pub modes: ModesStored,
-    pub editing_states: EditingStates,
     pub visual_mode: VisualMode,
     pub min_point: Pos2,
 }
@@ -75,12 +70,6 @@ impl KumirState {
             modes: ModesStored {
                 robot: rob,
                 none: none,
-            },
-            editing_states: EditingStates {
-                robot: RobotEditingState {
-                    deleting_rows_mode: RowsMode::FromDown,
-                    deleting_columns_mode: ColumnsMode::FromRight,
-                },
             },
             visual_mode: VisualMode::Dark,
             min_point: Pos2::new(10.0, 85.0),
