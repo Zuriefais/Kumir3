@@ -673,31 +673,35 @@ impl RobotApi {
         Self { robot: robot }
     }
 
-    pub fn move_up(&mut self) {
+    pub fn get_executor(&self) -> Arc<Mutex<Robot>> {
+        Arc::clone(&self.robot)
+    }
+
+    pub fn move_up(&self) {
         // #[cfg(unix)]
         // tracy_full::zone!("Move Up", tracy_full::color::Color::CYAN, true);
         self.robot.lock().unwrap().move_robot(0, -1);
     }
 
-    pub fn move_down(&mut self) {
+    pub fn move_down(&self) {
         // #[cfg(unix)]
         // tracy_full::zone!("Move Down", tracy_full::color::Color::CYAN, true);
         self.robot.lock().unwrap().move_robot(0, 1);
     }
 
-    pub fn move_right(&mut self) {
+    pub fn move_right(&self) {
         // #[cfg(unix)]
         // tracy_full::zone!("Move Right", tracy_full::color::Color::CYAN, true);
         self.robot.lock().unwrap().move_robot(1, 0);
     }
 
-    pub fn move_left(&mut self) {
+    pub fn move_left(&self) {
         // #[cfg(unix)]
         // tracy_full::zone!("Move Left", tracy_full::color::Color::CYAN, true);
         self.robot.lock().unwrap().move_robot(-1, 0);
     }
 
-    pub fn color(&mut self) {
+    pub fn color(&self) {
         // #[cfg(unix)]
         // tracy_full::zone!("Color Cell", tracy_full::color::Color::CYAN, true);
         let mut rob = self.robot.lock().unwrap();

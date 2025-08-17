@@ -1,4 +1,4 @@
-use crate::executors::robot::{ColumnsMode, Robot, RobotEditingState, RowsMode};
+use crate::executors::robot::{ColumnsMode, Robot, RobotApi, RobotEditingState, RowsMode};
 use crate::executors::{Executor, NoneSelected};
 use egui::Pos2;
 use log::info;
@@ -33,6 +33,7 @@ impl fmt::Display for Modes {
 }
 
 pub struct ModesStored {
+    pub robot_api: Arc<RobotApi>,
     pub robot: Arc<Mutex<dyn Executor>>,
     pub none: Arc<Mutex<dyn Executor>>,
 }
@@ -68,6 +69,7 @@ impl KumirState {
             height: height,
             selected_mode: Modes::None,
             modes: ModesStored {
+                robot_api: Arc::new(RobotApi::new(Arc::clone(&rob))),
                 robot: rob,
                 none: none,
             },
@@ -96,7 +98,19 @@ impl KumirState {
             .update_transform(width, height);
     }
 
-    pub fn run(&mut self) {}
+    pub fn run(&mut self) {
+        match self.selected_mode {
+            Modes::Robot => {
+                let rob_api = Arc::clone(&self.modes.robot_api);
+                thread::spawn(move || {
+                    rob_api.move_right();
+                    thread::sleep(time::Duration::from_millis(1000));
+                    rob_api.move_left();
+                });
+            }
+            _ => (),
+        }
+    }
 
     pub fn update_min_point(&mut self, pos: Pos2) {
         if self.min_point != pos {
