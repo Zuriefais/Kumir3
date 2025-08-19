@@ -1,7 +1,11 @@
+use indexmap::IndexMap;
 use kumir_lang::{
-    ast::{self, AstNode, Expr, Literal, Parser, Stmt, VarDecl},
+    ast::{
+        self, AstNode, Environment, Expr, FunctionParameter, Literal, NativeFunction, Parser, Stmt,
+        VarDecl,
+    },
     interpreter::Interpreter,
-    lexer::{self, Lexer, Token},
+    lexer::{self, Lexer, Token, TypeDefinition},
 };
 use log::info;
 
@@ -33,6 +37,18 @@ fn main() {
         Ok(ast) => {
             info!("AST generated: {ast:#?}");
             let mut interpreter = Interpreter::new(ast);
+            interpreter.register_native_function(
+                "раст",
+                NativeFunction {
+                    params: {
+                        let mut params = IndexMap::new();
+                        params.insert("число".to_string(), FunctionParameter { type_definition: TypeDefinition::Float, result_type: lexer::FunctionParamType::ArgumentParam });
+                        params
+                    },
+                    return_type: Some(TypeDefinition::Float),
+                    native_function: |environment: &mut Environment| -> Result<Option<kumir_lang::ast::Literal>, String> {let num = environment.get_value("число").unwrap(); if let Literal::Float(num) = num {return Ok(Some(Literal::Float(num*40.0)))} return Err(format!("Err")); },
+                },
+            );
 
             info!("Interpreter result: {:#?}", interpreter.run());
 

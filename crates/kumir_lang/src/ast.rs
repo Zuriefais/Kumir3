@@ -1,4 +1,7 @@
-use std::fmt::{Display, format};
+use std::{
+    env,
+    fmt::{Display, format},
+};
 
 use hashbrown::HashMap;
 use indexmap::IndexMap;
@@ -992,6 +995,7 @@ fn function_call(
 
             //Creating function scope...
             let mut scope = Environment::new();
+            scope.functions = environment.functions.clone();
 
             let mut value_to_return_from_function: Vec<String> = vec![];
 
@@ -1034,7 +1038,7 @@ fn function_call(
             };
 
             //Execute function
-            function(&mut scope)?;
+            let value = function(&mut scope)?;
 
             //Return values
             for name in value_to_return_from_function {
@@ -1047,6 +1051,9 @@ fn function_call(
             }
 
             if is_not_procedure {
+                if let Some(value) = value {
+                    return Ok(FunctionResult::Literal(value));
+                }
                 let value = scope
                     .get_value("знач")
                     .ok_or(format!("Value of alg func is nothing"))?;
@@ -1057,11 +1064,11 @@ fn function_call(
         };
 
     match function {
-        FunctionVariant::Native {
+        FunctionVariant::Native(NativeFunction {
             native_function,
             params,
             return_type,
-        } => run_function(
+        }) => run_function(
             &call.args,
             &params,
             return_type,
@@ -1093,6 +1100,13 @@ pub struct Function {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct NativeFunction {
+    pub params: IndexMap<String, FunctionParameter>,
+    pub return_type: Option<TypeDefinition>,
+    pub native_function: fn(environment: &mut Environment) -> Result<Option<Literal>, String>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum FunctionResult {
     Literal(Literal),
     Procedure,
@@ -1100,11 +1114,7 @@ pub enum FunctionResult {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum FunctionVariant {
-    Native {
-        params: IndexMap<String, FunctionParameter>,
-        return_type: Option<TypeDefinition>,
-        native_function: fn(environment: &mut Environment) -> Result<Option<Literal>, String>,
-    },
+    Native(NativeFunction),
     Kumir(Function),
 }
 
@@ -1134,12 +1144,12 @@ impl Environment {
         }
     }
 
-    fn new_var(&mut self, name: &str, value: Option<Literal>, type_def: TypeDefinition) {
+    pub fn new_var(&mut self, name: &str, value: Option<Literal>, type_def: TypeDefinition) {
         self.variables
             .insert(name.to_string(), Variable { type_def, value });
     }
 
-    fn assign_var(&mut self, name: &str, value: Literal) {
+    pub fn assign_var(&mut self, name: &str, value: Literal) {
         if self.get_var_type(name) == Some(value.get_type()) {
             self.variables.insert(
                 name.to_string(),
@@ -1151,25 +1161,25 @@ impl Environment {
         }
     }
 
-    fn get_var_type(&self, name: &str) -> Option<TypeDefinition> {
+    pub fn get_var_type(&self, name: &str) -> Option<TypeDefinition> {
         if let Some(var) = self.get_var(name) {
             return Some(var.type_def);
         }
         None
     }
 
-    fn check_var_exist(&mut self, name: &str) -> bool {
+    pub fn check_var_exist(&mut self, name: &str) -> bool {
         self.variables.contains_key(name)
     }
 
-    fn get_var(&self, name: &str) -> Option<Variable> {
+    pub fn get_var(&self, name: &str) -> Option<Variable> {
         Some(self.variables.get(name)?.clone())
     }
-    fn get_value(&self, name: &str) -> Option<Literal> {
+    pub fn get_value(&self, name: &str) -> Option<Literal> {
         self.variables.get(name)?.clone().value
     }
 
-    fn remove_var(&mut self, name: &str) -> Result<(), String> {
+    pub fn remove_var(&mut self, name: &str) -> Result<(), String> {
         self.variables
             .remove(name)
             .map(|_| ())
@@ -1180,7 +1190,7 @@ impl Environment {
         self.functions.insert(name.to_string(), function);
     }
 
-    fn get_function(&self, name: &str) -> Option<&FunctionVariant> {
+    pub fn get_function(&self, name: &str) -> Option<&FunctionVariant> {
         self.functions.get(name)
     }
 }

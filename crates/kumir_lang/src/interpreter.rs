@@ -1,7 +1,7 @@
 use log::info;
 
 use crate::{
-    ast::{AstNode, Environment, Parser, Stmt},
+    ast::{AstNode, Environment, NativeFunction, Parser, Stmt},
     lexer::{Lexer, Token},
 };
 
@@ -33,6 +33,11 @@ impl Interpreter {
                 }
             }
         }
+    }
+
+    pub fn register_native_function(&mut self, name: &str, function: NativeFunction) {
+        self.environment
+            .register_function(name, crate::ast::FunctionVariant::Native(function));
     }
 
     pub fn new(ast: AstNode) -> Self {
