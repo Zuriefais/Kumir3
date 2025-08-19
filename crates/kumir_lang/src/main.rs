@@ -34,7 +34,7 @@ fn main() {
             info!("AST generated: {ast:#?}");
             let mut interpreter = Interpreter::new(ast);
 
-            info!("Interpreter result: {:?}", interpreter.run());
+            info!("Interpreter result: {:#?}", interpreter.run());
 
             info!("Interpreter environment: {:#?}", interpreter.environment);
         }

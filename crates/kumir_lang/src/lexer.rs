@@ -113,8 +113,6 @@ pub enum Function {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum FunctionParamType {
-    ///Nothing
-    Normal,
     ///рез
     ResultParam,
     ///арг

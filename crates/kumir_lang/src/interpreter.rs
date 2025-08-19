@@ -26,7 +26,10 @@ impl Interpreter {
         if let AstNode::Program(body) = &self.ast {
             for stmt in body {
                 if let Stmt::Alg(alg) = stmt {
-                    self.environment.register_function(&alg.name, alg.clone());
+                    self.environment.register_function(
+                        &alg.name,
+                        crate::ast::FunctionVariant::Kumir(alg.clone()),
+                    );
                 }
             }
         }
