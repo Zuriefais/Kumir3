@@ -1,6 +1,7 @@
 use std::fmt::{Display, format};
 
 use hashbrown::HashMap;
+use indexmap::IndexMap;
 use log::info;
 
 use crate::{
@@ -56,6 +57,7 @@ pub enum Stmt {
     Output {
         values: Vec<Expr>,
     },
+    FunctionCall(FunctionCall),
     Break,
 }
 
@@ -71,8 +73,7 @@ pub enum Expr {
 #[derive(Debug, PartialEq, Clone)]
 pub struct FunctionCall {
     pub name: String,
-    //Name and Value
-    pub args: HashMap<String, Expr>,
+    pub args: Vec<Expr>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -154,10 +155,56 @@ impl Parser {
             Token::Keyword(Keyword::Loop(Loop::Start)) => self.parse_loop(),
             Token::Keyword(Keyword::Loop(Loop::Break)) => Ok(Stmt::Break),
             Token::Keyword(Keyword::TypeDef(type_def)) => self.parse_var_decl(&type_def),
-            Token::Identifier(_) => self.parse_assign(),
+            Token::Identifier(name) => {
+                if self.next_token().is_operator(Operator::Assignment) {
+                    self.parse_assign()
+                } else {
+                    self.parse_function_call_stmt(&name)
+                }
+            }
             Token::Keyword(Keyword::IO(io_keyword)) => self.parse_io(io_keyword),
             _ => Err(format!("Unexpected token: {:?}", self.current_token())),
         }
+    }
+
+    fn parse_function_call_stmt(&mut self, name: &str) -> Result<Stmt, String> {
+        Ok(Stmt::FunctionCall(self.parse_function_call(name)?))
+    }
+
+    fn parse_function_call_expr(&mut self, name: &str) -> Result<Expr, String> {
+        Ok(Expr::FunctionCall(self.parse_function_call(name)?))
+    }
+
+    fn parse_function_call(&mut self, name: &str) -> Result<FunctionCall, String> {
+        //Skip name
+        self.advance();
+
+        //Parse arguments
+        let mut args: Vec<Expr> = vec![];
+        if self
+            .current_token()
+            .is_delimiter(Delimiter::ParenthesisOpen)
+        {
+            //Skip "("
+            self.advance();
+
+            while !self
+                .current_token()
+                .is_delimiter(Delimiter::ParenthesisClose)
+            {
+                args.push(self.parse_expr()?);
+                if self.current_token().is_delimiter(Delimiter::Comma) {
+                    self.advance()
+                } else {
+                    break;
+                }
+            }
+
+            //Skip ")"
+            self.advance();
+        }
+        let name = name.to_string();
+        Ok(FunctionCall { name, args })
     }
 
     fn parse_io(&mut self, io_keyword: IO) -> Result<Stmt, String> {
@@ -331,7 +378,7 @@ impl Parser {
             _ => "main".to_string(),
         };
         info!("Function name: {name}");
-        let mut params: HashMap<String, FunctionParameter> = HashMap::new();
+        let mut params: IndexMap<String, FunctionParameter> = IndexMap::new();
         if Token::Delimiter(Delimiter::ParenthesisOpen) == *self.current_token() {
             self.advance();
             info!(
@@ -543,9 +590,11 @@ impl Parser {
                 Ok(Expr::Literal(Literal::Bool(b)))
             }
             Token::Identifier(name) => {
-                let name = name.clone();
+                if self.next_token().is_delimiter(Delimiter::ParenthesisOpen) {
+                    return self.parse_function_call_expr(&name);
+                }
                 self.advance();
-                Ok(Expr::Identifier(name))
+                Ok(Expr::Identifier(name.clone()))
             }
 
             Token::Delimiter(Delimiter::ParenthesisOpen) => {
@@ -731,7 +780,6 @@ impl Stmt {
             Stmt::Break => {
                 return Ok(EvalResult::Break);
             }
-
             Stmt::Output { values } => {
                 println!();
                 for value in values {
@@ -741,6 +789,9 @@ impl Stmt {
                         print!("{}", value.eval(environment)?);
                     }
                 }
+            }
+            Stmt::FunctionCall(call) => {
+                function_call(call, environment)?;
             }
         }
         Ok(EvalResult::Procedure)
@@ -901,40 +952,41 @@ fn function_call(
         .clone();
 
     let run_function =
-        |args: &HashMap<String, Expr>,
-         params: &HashMap<String, FunctionParameter>,
+        |args_expr: &Vec<Expr>,
+         params: &IndexMap<String, FunctionParameter>,
          return_type: Option<TypeDefinition>,
          environment: &mut Environment,
          function: Box<dyn FnOnce(&mut Environment) -> Result<Option<Literal>, String>>|
          -> Result<FunctionResult, String> {
-            let args: HashMap<String, Literal> = args
-                .iter()
-                .map(|(name, expr)| {
-                    let name_owned = name.clone();
-                    let literal_owned = expr.eval(environment)?;
-                    Ok((name_owned, literal_owned))
-                })
-                .collect::<Result<HashMap<String, Literal>, String>>()?;
+            let mut args: HashMap<usize, Literal> = HashMap::new();
+            for (i, (expr, param)) in args_expr.iter().zip(params.values()).enumerate() {
+                if param.result_type != FunctionParamType::ResultParam {
+                    let value = expr.eval(environment)?;
+                    args.insert(i, value);
+                }
+            }
 
-            //check param names
-            if args.len() != params.len() {
+            //check param count
+            if args_expr.len() != params.len() {
                 return Err(format!(
                     "params and args mismatch args: {:?}, params: {:?}",
-                    args, params
+                    args_expr, params
                 ));
             }
 
             //check param types
-            if args.keys().all(|key| params.contains_key(key)) {
-                for (param_name, param_type) in params.iter() {
-                    if let Some(arg_value) = args.get(param_name) {
-                        if param_type.type_definition != arg_value.get_type() {
-                            return Err(format!(
-                                "type mismatch for param {} expected {:?} got {:?}",
-                                param_name, param_type, arg_value
-                            ));
-                        }
-                    }
+            for (i, arg) in args.iter() {
+                if params
+                    .get_index(*i)
+                    .ok_or(format!("Couldn't "))?
+                    .1
+                    .type_definition
+                    != arg.get_type()
+                {
+                    return Err(format!(
+                        "params and args mismatch args: {:?}, params: {:?}",
+                        args, params
+                    ));
                 }
             }
 
@@ -944,23 +996,37 @@ fn function_call(
             let mut value_to_return_from_function: Vec<String> = vec![];
 
             //Map return types
-            for (name, parameter) in params.iter() {
+            for (i, (name, parameter)) in params.iter().enumerate() {
                 match parameter.result_type {
                     FunctionParamType::ResultParam => {
+                        if environment.get_var_type(name) != Some(parameter.type_definition) {
+                            return Err(format!(
+                                "params and args mismatch args: {:?}, params: {:?}",
+                                args, params
+                            ));
+                        }
                         scope.new_var(name, None, parameter.type_definition);
                         value_to_return_from_function.push(name.clone());
                     }
                     FunctionParamType::ArgumentParam => {
-                        scope.assign_var(name, args.get(name).unwrap().clone());
+                        scope.new_var(
+                            name,
+                            Some(args.get(&i).unwrap().clone()),
+                            parameter.type_definition,
+                        );
                     }
                     FunctionParamType::ArgumentResultParam => {
-                        scope.assign_var(name, args.get(name).unwrap().clone());
+                        scope.new_var(
+                            name,
+                            Some(args.get(&i).unwrap().clone()),
+                            parameter.type_definition,
+                        );
                         value_to_return_from_function.push(name.clone());
                     }
                 }
             }
 
-            let is_alg_func = if let Some(return_type) = return_type {
+            let is_not_procedure = if let Some(return_type) = return_type {
                 scope.new_var("знач".into(), None, return_type);
                 true
             } else {
@@ -980,7 +1046,7 @@ fn function_call(
                 environment.assign_var(&name, value);
             }
 
-            if is_alg_func {
+            if is_not_procedure {
                 let value = scope
                     .get_value("знач")
                     .ok_or(format!("Value of alg func is nothing"))?;
@@ -1022,7 +1088,7 @@ fn function_call(
 pub struct Function {
     pub name: String,
     pub body: Box<AstNode>,
-    pub params: HashMap<String, FunctionParameter>,
+    pub params: IndexMap<String, FunctionParameter>,
     pub return_type: Option<TypeDefinition>,
 }
 
@@ -1035,7 +1101,7 @@ pub enum FunctionResult {
 #[derive(Debug, PartialEq, Clone)]
 pub enum FunctionVariant {
     Native {
-        params: HashMap<String, FunctionParameter>,
+        params: IndexMap<String, FunctionParameter>,
         return_type: Option<TypeDefinition>,
         native_function: fn(environment: &mut Environment) -> Result<Option<Literal>, String>,
     },

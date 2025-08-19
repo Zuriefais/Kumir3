@@ -41,7 +41,7 @@ fn main() {
         Err(err) => {
             let (statements, err) = err;
             info!("Error parsing AST: {}", err);
-            info!("Statements parsed: {:?}", statements);
+            info!("Statements parsed: {:#?}", statements);
             info!("AST generator stopped at token: {}", parser.position);
         }
     }

@@ -23,6 +23,34 @@ impl Token {
             _ => None,
         }
     }
+
+    pub fn is_identifier(&self) -> bool {
+        matches!(self, Token::Identifier(_))
+    }
+
+    pub fn is_keyword(&self, keyword: Keyword) -> bool {
+        if self == &Token::Keyword(keyword) {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_delimiter(&self, delimiter: Delimiter) -> bool {
+        if self == &Token::Delimiter(delimiter) {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_operator(&self, operator: Operator) -> bool {
+        if self == &Token::Operator(operator) {
+            true
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
