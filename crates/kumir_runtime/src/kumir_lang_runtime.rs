@@ -1,10 +1,9 @@
-use std::{cell::RefCell, rc::Rc, sync::Arc};
+use std::{cell::RefCell, rc::Rc};
 
 use indexmap::IndexMap;
 use kumir_lang::{
-    ast::{Environment, FunctionParameter, Literal, NativeFunction},
+    ast::{Environment, NativeFunction},
     interpreter::Interpreter,
-    lexer::{FunctionParamType, TypeDefinition},
 };
 use log::info;
 
@@ -23,6 +22,7 @@ impl Runtime for KumirLangRuntime {
         register_move_down(&mut interpreter, requirements.clone());
         register_move_left(&mut interpreter, requirements.clone());
         register_move_right(&mut interpreter, requirements.clone());
+        register_paint(&mut interpreter, requirements.clone());
         Ok(Self {
             requirements,
             interpreter,
@@ -43,7 +43,7 @@ fn register_move_up(interpreter: &mut Interpreter, requirements: RuntimeRequirem
         NativeFunction {
             params: IndexMap::new(),
             return_type: None,
-            native_function: Rc::new(RefCell::new(move |environment: &mut Environment| {
+            native_function: Rc::new(RefCell::new(move |_: &mut Environment| {
                 requirements.move_up();
                 Ok(None)
             })),
@@ -57,7 +57,7 @@ fn register_move_down(interpreter: &mut Interpreter, requirements: RuntimeRequir
         NativeFunction {
             params: IndexMap::new(),
             return_type: None,
-            native_function: Rc::new(RefCell::new(move |environment: &mut Environment| {
+            native_function: Rc::new(RefCell::new(move |_: &mut Environment| {
                 requirements.move_up();
                 Ok(None)
             })),
@@ -71,7 +71,7 @@ fn register_move_left(interpreter: &mut Interpreter, requirements: RuntimeRequir
         NativeFunction {
             params: IndexMap::new(),
             return_type: None,
-            native_function: Rc::new(RefCell::new(move |environment: &mut Environment| {
+            native_function: Rc::new(RefCell::new(move |_: &mut Environment| {
                 requirements.move_up();
                 Ok(None)
             })),
@@ -85,7 +85,21 @@ fn register_move_right(interpreter: &mut Interpreter, requirements: RuntimeRequi
         NativeFunction {
             params: IndexMap::new(),
             return_type: None,
-            native_function: Rc::new(RefCell::new(move |environment: &mut Environment| {
+            native_function: Rc::new(RefCell::new(move |_: &mut Environment| {
+                requirements.move_up();
+                Ok(None)
+            })),
+        },
+    );
+}
+
+fn register_paint(interpreter: &mut Interpreter, requirements: RuntimeRequirements) {
+    interpreter.register_native_function(
+        "закрасить",
+        NativeFunction {
+            params: IndexMap::new(),
+            return_type: None,
+            native_function: Rc::new(RefCell::new(move |_: &mut Environment| {
                 requirements.move_up();
                 Ok(None)
             })),

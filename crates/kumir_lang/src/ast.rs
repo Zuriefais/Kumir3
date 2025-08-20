@@ -227,7 +227,9 @@ impl Parser {
     }
 
     fn parse_output(&mut self) -> Result<Stmt, String> {
+        //Skip Output keyword
         self.advance();
+
         let mut values = Vec::new();
 
         while !self.is_eof() {
@@ -244,6 +246,9 @@ impl Parser {
                 _ => {
                     let expr = self.parse_expr()?;
                     values.push(expr);
+                    if !self.current_token().is_delimiter(Delimiter::Comma) {
+                        break;
+                    }
                 }
             }
         }

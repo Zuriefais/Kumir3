@@ -8,5 +8,8 @@ run_web:
 run_lang:
     RUST_LOG=info cargo run --package kumir_lang
 
+run_runtime:
+    RUST_LOG=info cargo run --package kumir_runtime
+
 build:
     cargo build --release --package kumir_gui
