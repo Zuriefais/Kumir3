@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use indexmap::IndexMap;
 use kumir_lang::{
     ast::{
@@ -46,7 +48,7 @@ fn main() {
                         params
                     },
                     return_type: Some(TypeDefinition::Float),
-                    native_function: |environment: &mut Environment| -> Result<Option<kumir_lang::ast::Literal>, String> {let num = environment.get_value("число").unwrap(); if let Literal::Float(num) = num {return Ok(Some(Literal::Float(num*40.0)))} return Err(format!("Err")); },
+                    native_function: Rc::new(RefCell::new(|environment: &mut Environment| -> Result<Option<kumir_lang::ast::Literal>, String> {let num = environment.get_value("число").unwrap(); if let Literal::Float(num) = num {return Ok(Some(Literal::Float(num*40.0)))} return Err(format!("Err")); })),
                 },
             );
 

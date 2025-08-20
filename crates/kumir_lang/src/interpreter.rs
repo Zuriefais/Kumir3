@@ -1,4 +1,4 @@
-use log::info;
+use log::{error, info};
 
 use crate::{
     ast::{AstNode, Environment, NativeFunction, Parser, Stmt},
@@ -47,22 +47,36 @@ impl Interpreter {
         }
     }
 
-    // pub fn new_from_tokens(tokens: Vec<Token>) -> Result<Self, String> {
-    //     Ok(Self::new(Parser::new(tokens).parse()?))
-    // }
+    pub fn new_from_tokens(tokens: Vec<Token>) -> Result<Self, String> {
+        let mut parser = Parser::new(tokens);
+        match parser.parse() {
+            Ok(ast) => {
+                info!("AST generated: {ast:#?}");
+                let interpreter = Interpreter::new(ast);
+                return Ok(interpreter);
+            }
+            Err(err) => {
+                let (statements, err) = err;
+                error!("Error parsing AST: {}", err);
+                error!("Statements parsed: {:#?}", statements);
+                error!("AST generator stopped at token: {}", parser.position);
+                return Err(format!("Error creating interpreter"));
+            }
+        }
+    }
 
-    // pub fn new_from_string(input: &str) -> Result<Self, String> {
-    //     let mut lexer = Lexer::new(input);
-    //     let mut tokens = vec![];
-    //     loop {
-    //         match lexer.next_token() {
-    //             Ok(Token::Eof) => break,
-    //             Ok(token) => {
-    //                 tokens.push(token);
-    //             }
-    //             Err(e) => println!("Ошибка: {e}"),
-    //         }
-    //     }
-    //     Self::new_from_tokens(tokens)
-    // }
+    pub fn new_from_string(input: &str) -> Result<Self, String> {
+        let mut lexer = Lexer::new(input);
+        let mut tokens = vec![];
+        loop {
+            match lexer.next_token() {
+                Ok(Token::Eof) => break,
+                Ok(token) => {
+                    tokens.push(token);
+                }
+                Err(e) => println!("Error: {e}"),
+            }
+        }
+        Self::new_from_tokens(tokens)
+    }
 }

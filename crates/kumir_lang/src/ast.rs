@@ -1,6 +1,8 @@
 use std::{
+    cell::RefCell,
     env,
     fmt::{Display, format},
+    rc::Rc,
 };
 
 use hashbrown::HashMap;
@@ -1073,7 +1075,7 @@ fn function_call(
             &params,
             return_type,
             environment,
-            Box::new(native_function),
+            Box::new(move |env: &mut Environment| native_function.borrow_mut()(env)),
         ),
         FunctionVariant::Kumir(function) => run_function(
             &call.args,
@@ -1099,11 +1101,23 @@ pub struct Function {
     pub return_type: Option<TypeDefinition>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+pub type ClonableFnMut =
+    Rc<RefCell<dyn FnMut(&mut Environment) -> Result<Option<Literal>, String>>>;
+
+#[derive(Clone)]
 pub struct NativeFunction {
     pub params: IndexMap<String, FunctionParameter>,
     pub return_type: Option<TypeDefinition>,
-    pub native_function: fn(environment: &mut Environment) -> Result<Option<Literal>, String>,
+    pub native_function: ClonableFnMut,
+}
+
+impl std::fmt::Debug for NativeFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NativeFunction")
+            .field("params", &self.params)
+            .field("return_type", &self.return_type)
+            .finish()
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -1112,7 +1126,7 @@ pub enum FunctionResult {
     Procedure,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub enum FunctionVariant {
     Native(NativeFunction),
     Kumir(Function),
@@ -1124,7 +1138,7 @@ pub struct Variable {
     pub value: Option<Literal>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct Environment {
     variables: HashMap<String, Variable>,
     functions: HashMap<String, FunctionVariant>,
