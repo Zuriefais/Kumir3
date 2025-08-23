@@ -178,7 +178,8 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                         ui.input(|input: &'_ egui::InputState| {
                             let zoom_delta = input.zoom_delta();
                             self.kumir_state.change_scale(zoom_delta as f64 - 1.0);
-                            self.kumir_state.hover(input.pointer.hover_pos());
+                            self.kumir_state
+                                .hover(input.pointer.hover_pos(), ui.pixels_per_point());
                             // println!("{:?}", input.pointer.hover_pos());
                         });
                     }

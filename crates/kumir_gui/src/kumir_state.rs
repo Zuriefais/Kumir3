@@ -130,13 +130,13 @@ impl KumirState {
         self.current_mode().base_color()
     }
 
-    pub fn hover(&self, pos: Option<Pos2>) {
+    pub fn hover(&self, pos: Option<Pos2>, pixels_per_point: f32) {
         if pos == None {
             return;
         }
 
         self.current_mode()
-            .hovered((pos.unwrap() - self.min_point).to_pos2());
+            .hovered((pos.unwrap() - self.min_point).to_pos2(), pixels_per_point);
     }
 
     pub fn click(&self) {
