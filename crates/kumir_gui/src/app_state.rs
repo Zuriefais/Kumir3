@@ -135,7 +135,7 @@ impl AppState {
         .expect("Couldn't create renderer");
         let vello_scene = Arc::new(Mutex::new(Scene::new()));
 
-        let kumir_state = KumirState::new(Arc::clone(&vello_scene), 0f64, 0f64);
+        let kumir_state = KumirState::new(Arc::clone(&vello_scene), 0.0, 0.0);
         let kumir_gui = KumirGui::new(
             egui_renderer.context(),
             kumir_state,
@@ -185,8 +185,10 @@ impl AppState {
             vello_window_changed = true;
             vello_size.changed = false;
             info!(
-                "Vello texture size changed: {}, {}",
-                vello_size.width, vello_size.height
+                "Vello texture size changed: {}, {}, PPP: {}",
+                vello_size.width,
+                vello_size.height,
+                self.egui_renderer.context().pixels_per_point()
             );
             self.vello_texture =
                 create_vello_texture(&self.device, vello_size.width, vello_size.height);
