@@ -1,7 +1,9 @@
 use crate::kumir_state::{KumirState, Modes};
+use crate::rustpy::run;
 use crate::widgets::robot_gui::RobotWidget;
 use egui::{Align2, Pos2, Sense, TextureId, Vec2, load::SizedTexture};
 use egui_extras::syntax_highlighting::highlight;
+use log::info;
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
@@ -120,6 +122,19 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                     });
                 });
 
+                ui.horizontal(|ui| {
+                    if ui.add(egui::Button::new("Запустить")).clicked() {
+                        run::run_code_from_string(
+                            options.code.as_str(),
+                            self.kumir_state.modes.clone(),
+                        );
+                        info!("Something should run");
+                    }
+
+                    if ui.add(egui::Button::new("Остановить")).clicked() {
+                        info!("Something should stop");
+                    }
+                });
                 let mut layouter = |ui: &egui::Ui, buf: &str, wrap_width: f32| {
                     let lang = format!("{}", options.lang);
                     let mut layout_job =

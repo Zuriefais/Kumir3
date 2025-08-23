@@ -1,10 +1,12 @@
 use egui::Pos2;
 use vello::{Scene, peniko::Color};
 pub mod robot;
+use crate::executors::robot::robot_module;
 use crate::kumir_state::Modes;
 use std::any::Any;
+use std::fmt::Debug;
 
-pub trait Executor: Any {
+pub trait Executor: Any + Debug + Send {
     fn clear_field(&self, scene: &mut Scene);
     fn draw_field(&mut self, scene: &mut Scene);
     fn base_color(&self) -> Color;
@@ -21,6 +23,7 @@ impl dyn Executor {
     }
 }
 
+#[derive(Debug)]
 pub struct NoneSelected;
 impl NoneSelected {
     pub fn new() -> Self {

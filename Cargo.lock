@@ -2972,6 +2972,7 @@ dependencies = [
  "log",
  "pollster",
  "rustpython",
+ "rustpython-vm",
  "tracy_full",
  "vello",
  "wasm-bindgen",

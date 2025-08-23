@@ -36,14 +36,6 @@ impl KumirGui {
         egui::TopBottomPanel::top("tools").show(&self.egui_context, |ui| {
             ui.horizontal(|ui| {
                 UsageDiagnostics {}.ui(ui);
-                if ui.add(egui::Button::new("Запустить")).clicked() {
-                    self.kumir_state.run();
-                    info!("Something should run");
-                }
-
-                if ui.add(egui::Button::new("Остановить")).clicked() {
-                    info!("Something should stop");
-                }
 
                 egui::ComboBox::from_id_salt("mode")
                     .selected_text(self.kumir_state.selected_mode.to_string())

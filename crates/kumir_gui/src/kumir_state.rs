@@ -1,7 +1,13 @@
-use crate::executors::robot::{ColumnsMode, Robot, RobotApi, RobotEditingState, RowsMode};
+use crate::executors::robot::{
+    ColumnsMode, Robot, RobotEditingState, RowsMode, robot_module::RobotApi,
+};
 use crate::executors::{Executor, NoneSelected};
+use crate::rustpy::run;
 use egui::Pos2;
 use log::info;
+use rustpython::vm::{
+    PyObject, PyPayload, PyResult, TryFromBorrowedObject, VirtualMachine, pyclass, pymodule,
+};
 use std::fmt;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time;
@@ -32,10 +38,20 @@ impl fmt::Display for Modes {
     }
 }
 
+#[pyclass(module = "builtins", name = "modes")]
+#[derive(PyPayload, Debug, Clone)]
 pub struct ModesStored {
-    pub robot_api: Arc<RobotApi>,
+    pub robot_api: RobotApi,
     pub robot: Arc<Mutex<dyn Executor>>,
     pub none: Arc<Mutex<dyn Executor>>,
+}
+
+#[pyclass]
+impl ModesStored {
+    #[pymethod]
+    pub fn robot(&self) -> PyResult<RobotApi> {
+        Ok(self.robot_api.clone())
+    }
 }
 
 pub enum VisualMode {
@@ -69,7 +85,7 @@ impl KumirState {
             height: height,
             selected_mode: Modes::None,
             modes: ModesStored {
-                robot_api: Arc::new(RobotApi::new(Arc::clone(&rob))),
+                robot_api: RobotApi::new(Arc::clone(&rob)),
                 robot: rob,
                 none: none,
             },
@@ -96,20 +112,6 @@ impl KumirState {
             .lock()
             .unwrap()
             .update_transform(width, height);
-    }
-
-    pub fn run(&mut self) {
-        match self.selected_mode {
-            Modes::Robot => {
-                let rob_api = Arc::clone(&self.modes.robot_api);
-                thread::spawn(move || {
-                    rob_api.move_right();
-                    thread::sleep(time::Duration::from_millis(1000));
-                    rob_api.move_left();
-                });
-            }
-            _ => (),
-        }
     }
 
     pub fn update_min_point(&mut self, pos: Pos2) {

@@ -2,29 +2,33 @@ use crate::executors::Executor;
 use crate::kumir_state::Modes;
 use egui::{Pos2, Widget};
 use log::info;
+use rustpython::vm::{
+    PyObject, PyPayload, PyResult, TryFromBorrowedObject, VirtualMachine, pyclass, pymodule,
+};
 use std::sync::{Arc, Mutex};
 use vello::Scene;
 use vello::kurbo::{Affine, Line, Point, Rect, Stroke};
 use vello::peniko::{Color, color::palette::css};
 
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Debug)]
 pub enum RowsMode {
     FromUp,
     FromDown,
 }
 
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Debug)]
 pub enum ColumnsMode {
     FromLeft,
     FromRight,
 }
 
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Debug)]
 pub struct RobotEditingState {
     pub deleting_rows_mode: RowsMode,
     pub deleting_columns_mode: ColumnsMode,
 }
 
+#[derive(Debug)]
 pub enum Hovered {
     Cell {
         min: Point,
@@ -47,6 +51,7 @@ pub enum Hovered {
     None,
 }
 
+#[derive(Debug)]
 struct FieldParameters {
     fill_color: Color,
     grid_color: Color,
@@ -58,6 +63,7 @@ struct FieldParameters {
     hovered_color: Color,
 }
 
+#[derive(Debug)]
 pub struct Robot {
     width: usize,
     height: usize,
@@ -664,94 +670,133 @@ impl Executor for Robot {
     }
 }
 
-pub struct RobotApi {
-    robot: Arc<Mutex<Robot>>,
-}
+#[pymodule]
+pub mod robot_module {
+    use super::*;
+    use rustpython::vm::{PyObjectRef, convert::ToPyObject};
+    use rustpython_vm::Py;
 
-impl RobotApi {
-    pub fn new(robot: Arc<Mutex<Robot>>) -> Self {
-        Self { robot: robot }
+    #[pyattr]
+    #[pyclass(module = "robot", name = "Dummy")]
+    #[derive(Debug, PyPayload)]
+    pub struct Dummy {}
+
+    #[pyclass]
+    impl Dummy {
+        #[pymethod]
+        pub fn greet(&self) {
+            println!("Hi, someone");
+        }
     }
 
-    pub fn get_executor(&self) -> Arc<Mutex<Robot>> {
-        Arc::clone(&self.robot)
+    #[pyfunction]
+    fn create_dummy(vm: &VirtualMachine) -> PyResult<Dummy> {
+        Ok(Dummy {})
     }
 
-    pub fn move_up(&self) {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Move Up", tracy_full::color::Color::CYAN, true);
-        self.robot.lock().unwrap().move_robot(0, -1);
+    #[pyattr]
+    #[pyclass(module = "robot", name = "RobotApi")]
+    #[derive(Debug, PyPayload, Clone)]
+    pub struct RobotApi {
+        robot: Arc<Mutex<Robot>>,
     }
 
-    pub fn move_down(&self) {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Move Down", tracy_full::color::Color::CYAN, true);
-        self.robot.lock().unwrap().move_robot(0, 1);
-    }
+    #[pyclass]
+    impl RobotApi {
+        pub fn new(robot: Arc<Mutex<Robot>>) -> Self {
+            Self { robot: robot }
+        }
 
-    pub fn move_right(&self) {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Move Right", tracy_full::color::Color::CYAN, true);
-        self.robot.lock().unwrap().move_robot(1, 0);
-    }
+        pub fn get_executor(&self) -> Arc<Mutex<Robot>> {
+            Arc::clone(&self.robot)
+        }
 
-    pub fn move_left(&self) {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Move Left", tracy_full::color::Color::CYAN, true);
-        self.robot.lock().unwrap().move_robot(-1, 0);
-    }
+        #[pymethod]
+        pub fn move_up(&self) {
+            // #[cfg(unix)]
+            // tracy_full::zone!("Move Up", tracy_full::color::Color::CYAN, true);
+            self.robot.lock().unwrap().move_robot(0, -1);
+        }
 
-    pub fn color(&self) {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Color Cell", tracy_full::color::Color::CYAN, true);
-        let mut rob = self.robot.lock().unwrap();
-        let x = rob.x;
-        let y = rob.y;
-        rob.colored[x][y] = true;
-    }
+        #[pymethod]
+        pub fn move_down(&self) {
+            // #[cfg(unix)]
+            // tracy_full::zone!("Move Down", tracy_full::color::Color::CYAN, true);
+            self.robot.lock().unwrap().move_robot(0, 1);
+        }
 
-    pub fn is_colored(&self) -> bool {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Check Colored", tracy_full::color::Color::CYAN, true);
-        let rob = self.robot.lock().unwrap();
-        let x = rob.x;
-        let y = rob.y;
-        rob.colored[x][y]
-    }
+        #[pymethod]
+        pub fn move_right(&self) {
+            // #[cfg(unix)]
+            // tracy_full::zone!("Move Right", tracy_full::color::Color::CYAN, true);
+            self.robot.lock().unwrap().move_robot(1, 0);
+        }
 
-    pub fn from_above(&self) -> bool {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Check Above", tracy_full::color::Color::CYAN, true);
-        let rob = self.robot.lock().unwrap();
-        let x = rob.x;
-        let y = rob.y;
-        rob.horizontal_borders[x][y]
-    }
+        #[pymethod]
+        pub fn move_left(&self) {
+            // #[cfg(unix)]
+            // tracy_full::zone!("Move Left", tracy_full::color::Color::CYAN, true);
+            self.robot.lock().unwrap().move_robot(-1, 0);
+        }
 
-    pub fn from_below(&self) -> bool {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Check Below", tracy_full::color::Color::CYAN, true);
-        let rob = self.robot.lock().unwrap();
-        let x = rob.x;
-        let y = rob.y;
-        rob.horizontal_borders[x][y + 1]
-    }
+        #[pymethod]
+        pub fn color(&self) {
+            // #[cfg(unix)]
+            // tracy_full::zone!("Color Cell", tracy_full::color::Color::CYAN, true);
+            let mut rob = self.robot.lock().unwrap();
+            let x = rob.x;
+            let y = rob.y;
+            rob.colored[x][y] = true;
+        }
 
-    pub fn from_left(&self) -> bool {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Check Left", tracy_full::color::Color::CYAN, true);
-        let rob = self.robot.lock().unwrap();
-        let x = rob.x;
-        let y = rob.y;
-        rob.vertical_borders[x][y]
-    }
+        #[pymethod]
+        pub fn is_colored(&self) -> bool {
+            // #[cfg(unix)]
+            // tracy_full::zone!("Check Colored", tracy_full::color::Color::CYAN, true);
+            let rob = self.robot.lock().unwrap();
+            let x = rob.x;
+            let y = rob.y;
+            rob.colored[x][y]
+        }
 
-    pub fn from_right(&self) -> bool {
-        // #[cfg(unix)]
-        // tracy_full::zone!("Check Right", tracy_full::color::Color::CYAN, true);
-        let rob = self.robot.lock().unwrap();
-        let x = rob.x;
-        let y = rob.y;
-        rob.vertical_borders[x + 1][y]
+        #[pymethod]
+        pub fn from_above(&self) -> bool {
+            // #[cfg(unix)]
+            // tracy_full::zone!("Check Above", tracy_full::color::Color::CYAN, true);
+            let rob = self.robot.lock().unwrap();
+            let x = rob.x;
+            let y = rob.y;
+            rob.horizontal_borders[x][y]
+        }
+
+        #[pymethod]
+        pub fn from_below(&self) -> bool {
+            // #[cfg(unix)]
+            // tracy_full::zone!("Check Below", tracy_full::color::Color::CYAN, true);
+            let rob = self.robot.lock().unwrap();
+            let x = rob.x;
+            let y = rob.y;
+            rob.horizontal_borders[x][y + 1]
+        }
+
+        #[pymethod]
+        pub fn from_left(&self) -> bool {
+            // #[cfg(unix)]
+            // tracy_full::zone!("Check Left", tracy_full::color::Color::CYAN, true);
+            let rob = self.robot.lock().unwrap();
+            let x = rob.x;
+            let y = rob.y;
+            rob.vertical_borders[x][y]
+        }
+
+        #[pymethod]
+        pub fn from_right(&self) -> bool {
+            // #[cfg(unix)]
+            // tracy_full::zone!("Check Right", tracy_full::color::Color::CYAN, true);
+            let rob = self.robot.lock().unwrap();
+            let x = rob.x;
+            let y = rob.y;
+            rob.vertical_borders[x + 1][y]
+        }
     }
 }
