@@ -12,7 +12,7 @@ pub trait Executor: Any + Debug + Send {
     fn base_color(&self) -> Color;
     fn change_scale(&mut self, delta_scale: f64);
     fn get_scale(&self) -> f64;
-    fn hovered(&mut self, pos: Pos2);
+    fn hovered(&mut self, pos: Pos2, pixels_per_point: f32);
     fn clicked(&mut self);
     fn update_transform(&mut self, width: f64, height: f64);
 }
@@ -40,7 +40,7 @@ impl Executor for NoneSelected {
     fn get_scale(&self) -> f64 {
         0.0
     }
-    fn hovered(&mut self, pos: Pos2) {}
+    fn hovered(&mut self, pos: Pos2, pixels_per_point: f32) {}
     fn clicked(&mut self) {}
     fn update_transform(&mut self, width: f64, height: f64) {}
 }

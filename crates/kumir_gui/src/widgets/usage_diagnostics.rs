@@ -4,12 +4,6 @@ use web_time::Instant;
 
 pub struct UsageDiagnostics;
 
-impl UsageDiagnostics {
-    fn new() -> Self {
-        Self {}
-    }
-}
-
 impl Widget for UsageDiagnostics {
     fn ui(self, ui: &mut Ui) -> egui::Response {
         // Access stored data via Context
@@ -28,7 +22,6 @@ impl Widget for UsageDiagnostics {
             state.fps = state.frame_count as f32 / elapsed;
             state.frame_count = 0;
             state.last_frame_time = now;
-            log::info!("FPS: {:.2}", state.fps);
         }
 
         // Store updated state

@@ -1,16 +1,45 @@
+pub mod console_runtime_requirements;
+pub mod kumir_lang_runtime;
+use std::sync::Arc;
+
 use log::info;
 
-pub enum Target {
-    Interpreter(Interpreter),
-    Dummy(DummyRuntime),
-    #[cfg(not(target_arch = "wasm32"))]
-    Wasmtime(WasmtimeTarget),
+use crate::kumir_lang_runtime::KumirLangRuntime;
+
+pub enum Lang {
+    Kumir,
+    Python,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-pub enum WasmtimeTarget {}
+pub enum Target {
+    KumirLang(KumirLangRuntime),
+    #[cfg(not(target_arch = "wasm32"))]
+    Wasmtime(),
+}
 
-pub trait RuntimeRequirements: RobotRequirements {
+impl Runtime for Target {
+    fn init(requirements: RuntimeRequirements, lang: Lang, code: String) -> Result<Self, String> {
+        match lang {
+            Lang::Kumir => Ok(Target::KumirLang(KumirLangRuntime::init(
+                requirements,
+                lang,
+                code,
+            )?)),
+            Lang::Python => todo!(),
+        }
+    }
+
+    fn run(&mut self) -> Result<(), String> {
+        match self {
+            Target::KumirLang(kumir_lang_runtime) => kumir_lang_runtime.run(),
+            Target::Wasmtime() => todo!(),
+        }
+    }
+}
+
+pub type RuntimeRequirements = Arc<dyn RuntimeRequirementsTrait + 'static>;
+
+pub trait RuntimeRequirementsTrait: RobotRequirements {
     fn println(&self, message: &str);
 }
 
@@ -23,64 +52,9 @@ pub trait RobotRequirements {
 }
 
 pub trait Runtime {
-    fn init(requirements: Box<dyn RuntimeRequirements + 'static>) -> Self;
+    fn init(requirements: RuntimeRequirements, lang: Lang, code: String) -> Result<Self, String>
+    where
+        Self: Sized;
 
-    fn run(&self);
-}
-
-pub struct DummyRuntime {
-    requirements: Box<dyn RuntimeRequirements>,
-}
-
-impl Runtime for DummyRuntime {
-    fn init(requirements: Box<dyn RuntimeRequirements + 'static>) -> Self {
-        Self { requirements }
-    }
-
-    fn run(&self) {
-        self.requirements.move_up();
-    }
-}
-
-pub struct Interpreter {
-    requirements: Box<dyn RuntimeRequirements>,
-}
-
-impl Runtime for Interpreter {
-    fn init(requirements: Box<dyn RuntimeRequirements + 'static>) -> Self {
-        Self { requirements }
-    }
-
-    fn run(&self) {
-        self.requirements.move_up();
-    }
-}
-
-pub struct DummyRuntimeRequirements {}
-impl RuntimeRequirements for DummyRuntimeRequirements {
-    fn println(&self, message: &str) {
-        info!("{message}");
-    }
-}
-
-impl RobotRequirements for DummyRuntimeRequirements {
-    fn move_up(&self) {
-        info!("Moving up");
-    }
-
-    fn move_down(&self) {
-        info!("Moving down");
-    }
-
-    fn move_left(&self) {
-        info!("Moving left");
-    }
-
-    fn move_right(&self) {
-        info!("Moving right");
-    }
-
-    fn paint(&self) {
-        info!("Painting");
-    }
+    fn run(&mut self) -> Result<(), String>;
 }
