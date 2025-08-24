@@ -124,10 +124,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
 
                 ui.horizontal(|ui| {
                     if ui.add(egui::Button::new("Запустить")).clicked() {
-                        run::run_code_from_string(
-                            options.code.as_str(),
-                            self.kumir_state.modes.clone(),
-                        );
+                        run::run_code_from_string(options.code.as_str());
                         info!("Something should run");
                     }
 
