@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use kumir_runtime::{Runtime, Target, console_runtime_requirements::ConsoleRuntimeRequirements};
-use log::info;
+use log::{error, info};
 
 pub fn main() {
     env_logger::init();
@@ -12,5 +12,7 @@ pub fn main() {
         include_str!("test.kum").to_string(),
     )
     .unwrap();
-    target.run().unwrap();
+    if let Err(err) = target.run() {
+        error!("{err}")
+    };
 }

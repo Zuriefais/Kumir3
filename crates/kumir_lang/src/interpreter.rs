@@ -1,19 +1,22 @@
+use std::{cell::RefCell, rc::Rc};
+
 use log::{error, info};
 
 use crate::{
-    ast::{AstNode, Environment, NativeFunction, Parser, Stmt},
+    ast::{AstNode, Environment, NativeFunction, Stmt},
     lexer::{Lexer, Token},
+    parser::Parser,
 };
 
 pub struct Interpreter {
     pub ast: AstNode,
-    pub environment: Environment,
+    pub environment: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
     pub fn run(&mut self) -> Result<(), String> {
         self.register_functions();
-        match self.ast.eval(&mut self.environment) {
+        match self.ast.eval(&self.environment) {
             Ok(_) => {
                 info!("Program finished successfully");
                 Ok(())
@@ -26,7 +29,7 @@ impl Interpreter {
         if let AstNode::Program(body) = &self.ast {
             for stmt in body {
                 if let Stmt::Alg(alg) = stmt {
-                    self.environment.register_function(
+                    self.environment.borrow_mut().register_function(
                         &alg.name,
                         crate::ast::FunctionVariant::Kumir(alg.clone()),
                     );
@@ -37,13 +40,14 @@ impl Interpreter {
 
     pub fn register_native_function(&mut self, name: &str, function: NativeFunction) {
         self.environment
+            .borrow_mut()
             .register_function(name, crate::ast::FunctionVariant::Native(function));
     }
 
     pub fn new(ast: AstNode) -> Self {
         Interpreter {
             ast,
-            environment: Environment::new(),
+            environment: Default::default(),
         }
     }
 
