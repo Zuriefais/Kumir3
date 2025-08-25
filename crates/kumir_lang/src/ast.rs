@@ -129,7 +129,7 @@ impl ForLoop {
                 break;
             };
             if let Some(Literal::Int(i)) = environment_mut.get_value(&self.var) {
-                environment_mut.assign_var(&self.var, Literal::Int(i + step));
+                environment_mut.assign_var(&self.var, Literal::Int(i + step))?;
             }
         }
         Ok(())
@@ -323,7 +323,7 @@ impl FunctionCall {
                     .ok_or(format!("Couldn't find variable"))?
                     .value
                     .ok_or(format!("Variable value is None"))?;
-                environment.assign_var(&name, value);
+                environment.assign_var(&name, value)?;
             }
 
             if is_function {
@@ -440,7 +440,7 @@ impl Stmt {
             }
             Stmt::Assign { name, value } => {
                 let value = value.eval(environment)?;
-                environment.borrow_mut().assign_var(name, value);
+                environment.borrow_mut().assign_var(name, value)?;
             }
             Stmt::Alg(_) => {}
             Stmt::Condition(condition) => {
