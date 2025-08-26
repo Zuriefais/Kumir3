@@ -445,7 +445,7 @@ impl Robot {
         }
     }
 
-    fn move_robot(&mut self, x: i64, y: i64) {
+    pub fn move_robot(&mut self, x: i64, y: i64) {
         // #[cfg(unix)]
         // tracy_full::zone!("Move Robot", tracy_full::color::Color::CYAN, true);
         let new_x = self.x as i64 + x;

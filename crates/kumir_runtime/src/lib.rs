@@ -39,7 +39,7 @@ impl Runtime for Target {
 
 pub type RuntimeRequirements = Arc<dyn RuntimeRequirementsTrait + 'static>;
 
-pub trait RuntimeRequirementsTrait: RobotRequirements {
+pub trait RuntimeRequirementsTrait: RobotRequirements + Send + Sync {
     fn println(&self, message: &str);
 }
 

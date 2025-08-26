@@ -1218,6 +1218,7 @@ dependencies = [
  "egui_extras",
  "egui_tiles",
  "env_logger",
+ "kumir_runtime",
  "log",
  "pollster",
  "tracy_full",

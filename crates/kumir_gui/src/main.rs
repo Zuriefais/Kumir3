@@ -5,6 +5,7 @@ mod executors;
 mod gruvbox_egui;
 mod gui;
 mod kumir_state;
+mod runtime_requirements;
 mod widgets;
 
 use log::info;

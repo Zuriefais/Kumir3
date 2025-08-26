@@ -1,8 +1,10 @@
 use crate::kumir_state::{KumirState, Modes};
+use crate::runtime_requirements::GuiRuntimeRequirements;
 use crate::widgets::robot_gui::RobotWidget;
 use egui::{Align2, Pos2, Sense, TextureId, Vec2, load::SizedTexture};
 use egui_extras::syntax_highlighting::highlight;
-use log::info;
+use kumir_runtime::Runtime;
+use log::{error, info};
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
@@ -123,7 +125,19 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
 
                 ui.horizontal(|ui| {
                     if ui.add(egui::Button::new("Запустить")).clicked() {
-                        info!("Something should run");
+                        info!("Starting runtime");
+                        // let mut target = kumir_runtime::Target::init(
+                        //     Arc::new(GuiRuntimeRequirements {
+                        //         robot: self.kumir_state.modes.robot,
+                        //     }),
+                        //     kumir_runtime::Lang::Kumir,
+                        //     options.code,
+                        // )
+                        // .unwrap();
+                        // if let Err(err) = target.run() {
+                        //     error!("{err}")
+                        // };
+                        // info!("Something should run");
                     }
 
                     if ui.add(egui::Button::new("Остановить")).clicked() {
