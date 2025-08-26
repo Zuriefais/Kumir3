@@ -4,20 +4,17 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-wgpu = "*"
+wgpu = "24.0.5"
 egui = { version = "0.31.1" }
 egui_extras = { version = "0.31.1", features = ["syntect"] }
 egui-wgpu = { version = "0.31.1", features = ["winit"] }
 egui-winit = { version = "0.31.1", default-features = false }
 egui_tiles = "0.12.0"
-egui_console = "0.2.0"
-rustpython = "*"
-rustpython-vm = "*"
 
 winit = "0.30.9"
 wasm_thread = "*"
 log = { workspace = true }
-vello = "0.5.0"
+vello = "0.5.1"
 anyhow = "1.0.98"
 web-time = { version = "1.1.0" }
 
@@ -36,7 +33,6 @@ web-sys = { version = "0.3.77", features = [
     'Navigator',
     'Gpu',
 ] }
-
 [target.'cfg(unix)'.dependencies]
 tracy_full = { version = "1.12.0", features = ["enable", "wgpu"] }
 

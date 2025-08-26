@@ -1,5 +1,4 @@
 use crate::kumir_state::{KumirState, Modes};
-use crate::rustpy::run;
 use crate::widgets::robot_gui::RobotWidget;
 use egui::{Align2, Pos2, Sense, TextureId, Vec2, load::SizedTexture};
 use egui_extras::syntax_highlighting::highlight;
@@ -124,7 +123,6 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
 
                 ui.horizontal(|ui| {
                     if ui.add(egui::Button::new("Запустить")).clicked() {
-                        run::run_code_from_string(options.code.as_str());
                         info!("Something should run");
                     }
 

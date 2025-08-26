@@ -5,7 +5,6 @@ mod executors;
 mod gruvbox_egui;
 mod gui;
 mod kumir_state;
-mod rustpy;
 mod widgets;
 
 use log::info;

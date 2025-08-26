@@ -1,7 +1,7 @@
 use egui::Pos2;
 use vello::{Scene, peniko::Color};
 pub mod robot;
-use crate::executors::robot::robot_module;
+
 use crate::kumir_state::Modes;
 use std::any::Any;
 use std::fmt::Debug;

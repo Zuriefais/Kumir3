@@ -1,19 +1,12 @@
-use crate::executors::robot::{
-    ColumnsMode, Robot, RobotEditingState, RowsMode, robot_module::RobotApi,
-};
+use crate::executors::robot::Robot;
 use crate::executors::{Executor, NoneSelected};
-use crate::rustpy::run;
 use egui::Pos2;
-use log::info;
-use rustpython::vm::{
-    PyObject, PyPayload, PyResult, TryFromBorrowedObject, VirtualMachine, pyclass, pymodule,
-};
+
 use std::fmt;
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::time;
+
 use vello::Scene;
 use vello::peniko::Color;
-use wasm_thread as thread;
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum Modes {
@@ -38,20 +31,10 @@ impl fmt::Display for Modes {
     }
 }
 
-#[pyclass(module = "builtins", name = "modes")]
-#[derive(PyPayload, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct ModesStored {
-    pub robot_api: RobotApi,
     pub robot: Arc<Mutex<dyn Executor>>,
     pub none: Arc<Mutex<dyn Executor>>,
-}
-
-#[pyclass]
-impl ModesStored {
-    #[pymethod]
-    pub fn robot(&self) -> PyResult<RobotApi> {
-        Ok(self.robot_api.clone())
-    }
 }
 
 pub enum VisualMode {
@@ -85,7 +68,6 @@ impl KumirState {
             height: height,
             selected_mode: Modes::None,
             modes: ModesStored {
-                robot_api: RobotApi::new(Arc::clone(&rob)),
                 robot: rob,
                 none: none,
             },
