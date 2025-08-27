@@ -78,9 +78,18 @@ impl Interpreter {
                 Ok(token) => {
                     tokens.push(token);
                 }
-                Err(e) => println!("Error: {e}"),
+                Err(e) => {
+                    info!(
+                        "Error: {e}, tokens parsed {:#?}",
+                        tokens.iter().enumerate().collect::<Vec<_>>()
+                    );
+                }
             }
         }
+        info!(
+            "tokens parsed: {:#?}",
+            tokens.iter().enumerate().collect::<Vec<_>>()
+        );
         Self::new_from_tokens(tokens)
     }
 }

@@ -468,6 +468,17 @@ impl Lexer {
         {
             word.push(self.current_char.unwrap());
             self.advance();
+            if let Some(char) = self.current_char {
+                if char == ' '
+                    && self
+                        .input
+                        .get(self.position + 1)
+                        .is_some_and(|c| c.is_alphanumeric() || *c == '_')
+                {
+                    word.push(' ');
+                    self.advance();
+                }
+            }
         }
         word
     }
