@@ -315,50 +315,7 @@ impl Lexer {
                     self.skip_string();
                     self.next_token()
                 } else if c.is_alphabetic() || c == '_' {
-                    let word = self.collect_word();
-                    if [
-                        "алг",
-                        "нач",
-                        "кон",
-                        "цел",
-                        "вещ",
-                        "лог",
-                        "сим",
-                        "лит",
-                        "если",
-                        "все",
-                        "то",
-                        "иначе",
-                        "нц",
-                        "кц_при",
-                        "кц",
-                        "пока",
-                        "для",
-                        "от",
-                        "до",
-                        "ввод",
-                        "вывод",
-                        "нс",
-                        "раз",
-                        "арг",
-                        "рез",
-                        "аргрез",
-                        "дано",
-                    ]
-                    .contains(&word.as_str())
-                    {
-                        Ok(Token::Keyword(Keyword::from(word.as_str())))
-                    } else if ["да", "нет"].contains(&word.as_str()) {
-                        match word.as_str() {
-                            "да" => Ok(Token::Bool(true)),
-                            "нет" => Ok(Token::Bool(false)),
-                            _ => Err("Ошибка".to_string()),
-                        }
-                    } else if word.as_str() == "надо" {
-                        self.next_token()
-                    } else {
-                        Ok(Token::Identifier(word))
-                    }
+                    self.collect_word()
                 } else if c.is_ascii_digit() {
                     Ok(match self.collect_number() {
                         Number::Float(f) => Token::Float(f),
@@ -460,7 +417,7 @@ impl Lexer {
         str
     }
 
-    pub fn collect_word(&mut self) -> String {
+    pub fn collect_word(&mut self) -> Result<Token, String> {
         let mut word = String::new();
         while self
             .current_char
@@ -468,6 +425,47 @@ impl Lexer {
         {
             word.push(self.current_char.unwrap());
             self.advance();
+            if [
+                "алг",
+                "нач",
+                "кон",
+                "цел",
+                "вещ",
+                "лог",
+                "сим",
+                "лит",
+                "если",
+                "все",
+                "то",
+                "иначе",
+                "нц",
+                "кц_при",
+                "кц",
+                "пока",
+                "для",
+                "от",
+                "до",
+                "ввод",
+                "вывод",
+                "нс",
+                "раз",
+                "арг",
+                "рез",
+                "аргрез",
+                "дано",
+            ]
+            .contains(&word.as_str())
+            {
+                return Ok(Token::Keyword(Keyword::from(word.as_str())));
+            } else if ["да", "нет"].contains(&word.as_str()) {
+                match word.as_str() {
+                    "да" => return Ok(Token::Bool(true)),
+                    "нет" => return Ok(Token::Bool(false)),
+                    _ => return Err("Ошибка".to_string()),
+                }
+            } else if word.as_str() == "надо" {
+                return self.next_token();
+            }
             if let Some(char) = self.current_char {
                 if char == ' '
                     && self
@@ -480,7 +478,7 @@ impl Lexer {
                 }
             }
         }
-        word
+        Ok(Token::Identifier(word))
     }
 
     pub fn collect_number(&mut self) -> Number {
