@@ -17,12 +17,6 @@ pub trait Executor: Any + Debug + Send {
     fn update_transform(&mut self, width: f64, height: f64);
 }
 
-impl dyn Executor {
-    pub fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-}
-
 #[derive(Debug)]
 pub struct NoneSelected;
 impl NoneSelected {

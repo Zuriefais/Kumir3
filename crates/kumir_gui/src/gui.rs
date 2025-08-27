@@ -42,32 +42,32 @@ impl KumirGui {
                     .show_ui(ui, |ui| {
                         ui.selectable_value(
                             &mut self.kumir_state.selected_mode,
-                            Modes::None,
+                            self.kumir_state.modes.none.clone(),
                             "Не выбрано",
                         );
                         ui.selectable_value(
                             &mut self.kumir_state.selected_mode,
-                            Modes::Kuznechik,
+                            self.kumir_state.modes.kuznechik.clone(),
                             "Кузнечик",
                         );
                         ui.selectable_value(
                             &mut self.kumir_state.selected_mode,
-                            Modes::Vodolei,
+                            self.kumir_state.modes.vodolei.clone(),
                             "Водолей",
                         );
                         ui.selectable_value(
                             &mut self.kumir_state.selected_mode,
-                            Modes::Robot,
+                            self.kumir_state.modes.robot.clone(),
                             "Робот",
                         );
                         ui.selectable_value(
                             &mut self.kumir_state.selected_mode,
-                            Modes::Cherepaha,
+                            self.kumir_state.modes.cherepaha.clone(),
                             "Черепаха",
                         );
                         ui.selectable_value(
                             &mut self.kumir_state.selected_mode,
-                            Modes::Chertezhnik,
+                            self.kumir_state.modes.chertezhnik.clone(),
                             "Чертежник",
                         );
                     });

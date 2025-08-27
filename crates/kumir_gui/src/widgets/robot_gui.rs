@@ -1,5 +1,5 @@
 use crate::executors::robot::{ColumnsMode, Robot, RobotEditingState, RowsMode};
-use crate::kumir_state::KumirState;
+use crate::kumir_state::{KumirState, Modes};
 use egui::{Response, Ui, Widget};
 
 pub struct RobotWidget<'a> {
@@ -8,16 +8,9 @@ pub struct RobotWidget<'a> {
 
 impl Widget for RobotWidget<'_> {
     fn ui(self, ui: &mut Ui) -> Response {
-        match self
-            .kumir_state
-            .modes
-            .robot
-            .lock()
-            .unwrap()
-            .as_any_mut()
-            .downcast_mut::<Robot>()
-        {
-            Some(rob) => {
+        match self.kumir_state.selected_mode.clone() {
+            Modes::Robot(rob) => {
+                let mut rob = rob.lock().unwrap();
                 ui.scope(|ui| {
                     ui.horizontal(|ui| {
                         ui.label("Добавление/удаление столбцов: ");
@@ -83,12 +76,7 @@ impl Widget for RobotWidget<'_> {
                 })
                 .response
             }
-            None => {
-                ui.scope(|ui| {
-                    ui.label("An error with downcasting appeared");
-                })
-                .response
-            }
+            _ => ui.response(),
         }
     }
 }

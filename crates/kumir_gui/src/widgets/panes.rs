@@ -171,7 +171,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                     .anchor(Align2::RIGHT_TOP, [-10.0, 10.0])
                     .show(&ui.ctx().clone(), |ui| {
                         match self.kumir_state.selected_mode {
-                            Modes::Robot => ui.add(RobotWidget {
+                            Modes::Robot(_) => ui.add(RobotWidget {
                                 kumir_state: &mut self.kumir_state,
                             }),
                             _ => ui.label("Режим не выбран"),

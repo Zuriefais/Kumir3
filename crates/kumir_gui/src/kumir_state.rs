@@ -8,38 +8,139 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use vello::Scene;
 use vello::peniko::Color;
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(Clone, Debug)]
 pub enum Modes {
-    None,
-    Kuznechik,
-    Vodolei,
-    Cherepaha,
-    Chertezhnik,
-    Robot,
+    None(Arc<Mutex<NoneSelected>>),
+    Kuznechik(Arc<Mutex<NoneSelected>>),
+    Vodolei(Arc<Mutex<NoneSelected>>),
+    Cherepaha(Arc<Mutex<NoneSelected>>),
+    Chertezhnik(Arc<Mutex<NoneSelected>>),
+    Robot(Arc<Mutex<Robot>>),
+}
+
+impl Executor for Modes {
+    fn clear_field(&self, scene: &mut Scene) {
+        match self {
+            Modes::None(executor) => executor.lock().unwrap().clear_field(scene),
+            Modes::Kuznechik(executor) => executor.lock().unwrap().clear_field(scene),
+            Modes::Vodolei(executor) => executor.lock().unwrap().clear_field(scene),
+            Modes::Cherepaha(executor) => executor.lock().unwrap().clear_field(scene),
+            Modes::Chertezhnik(executor) => executor.lock().unwrap().clear_field(scene),
+            Modes::Robot(executor) => executor.lock().unwrap().clear_field(scene),
+        }
+    }
+
+    fn draw_field(&mut self, scene: &mut Scene) {
+        match self {
+            Modes::None(executor) => executor.lock().unwrap().draw_field(scene),
+            Modes::Kuznechik(executor) => executor.lock().unwrap().draw_field(scene),
+            Modes::Vodolei(executor) => executor.lock().unwrap().draw_field(scene),
+            Modes::Cherepaha(executor) => executor.lock().unwrap().draw_field(scene),
+            Modes::Chertezhnik(executor) => executor.lock().unwrap().draw_field(scene),
+            Modes::Robot(executor) => executor.lock().unwrap().draw_field(scene),
+        }
+    }
+
+    fn base_color(&self) -> Color {
+        match self {
+            Modes::None(executor) => executor.lock().unwrap().base_color(),
+            Modes::Kuznechik(executor) => executor.lock().unwrap().base_color(),
+            Modes::Vodolei(executor) => executor.lock().unwrap().base_color(),
+            Modes::Cherepaha(executor) => executor.lock().unwrap().base_color(),
+            Modes::Chertezhnik(executor) => executor.lock().unwrap().base_color(),
+            Modes::Robot(executor) => executor.lock().unwrap().base_color(),
+        }
+    }
+
+    fn change_scale(&mut self, delta_scale: f64) {
+        match self {
+            Modes::None(executor) => executor.lock().unwrap().change_scale(delta_scale),
+            Modes::Kuznechik(executor) => executor.lock().unwrap().change_scale(delta_scale),
+            Modes::Vodolei(executor) => executor.lock().unwrap().change_scale(delta_scale),
+            Modes::Cherepaha(executor) => executor.lock().unwrap().change_scale(delta_scale),
+            Modes::Chertezhnik(executor) => executor.lock().unwrap().change_scale(delta_scale),
+            Modes::Robot(executor) => executor.lock().unwrap().change_scale(delta_scale),
+        };
+    }
+
+    fn get_scale(&self) -> f64 {
+        match self {
+            Modes::None(executor) => executor.lock().unwrap().get_scale(),
+            Modes::Kuznechik(executor) => executor.lock().unwrap().get_scale(),
+            Modes::Vodolei(executor) => executor.lock().unwrap().get_scale(),
+            Modes::Cherepaha(executor) => executor.lock().unwrap().get_scale(),
+            Modes::Chertezhnik(executor) => executor.lock().unwrap().get_scale(),
+            Modes::Robot(executor) => executor.lock().unwrap().get_scale(),
+        }
+    }
+
+    fn hovered(&mut self, pos: Pos2, pixels_per_point: f32) {
+        match self {
+            Modes::None(executor) => executor.lock().unwrap().hovered(pos, pixels_per_point),
+            Modes::Kuznechik(executor) => executor.lock().unwrap().hovered(pos, pixels_per_point),
+            Modes::Vodolei(executor) => executor.lock().unwrap().hovered(pos, pixels_per_point),
+            Modes::Cherepaha(executor) => executor.lock().unwrap().hovered(pos, pixels_per_point),
+            Modes::Chertezhnik(executor) => executor.lock().unwrap().hovered(pos, pixels_per_point),
+            Modes::Robot(executor) => executor.lock().unwrap().hovered(pos, pixels_per_point),
+        }
+    }
+
+    fn clicked(&mut self) {
+        match self {
+            Modes::None(executor) => executor.lock().unwrap().clicked(),
+            Modes::Kuznechik(executor) => executor.lock().unwrap().clicked(),
+            Modes::Vodolei(executor) => executor.lock().unwrap().clicked(),
+            Modes::Cherepaha(executor) => executor.lock().unwrap().clicked(),
+            Modes::Chertezhnik(executor) => executor.lock().unwrap().clicked(),
+            Modes::Robot(executor) => executor.lock().unwrap().clicked(),
+        }
+    }
+
+    fn update_transform(&mut self, width: f64, height: f64) {
+        match self {
+            Modes::None(executor) => executor.lock().unwrap().update_transform(width, height),
+            Modes::Kuznechik(executor) => executor.lock().unwrap().update_transform(width, height),
+            Modes::Vodolei(executor) => executor.lock().unwrap().update_transform(width, height),
+            Modes::Cherepaha(executor) => executor.lock().unwrap().update_transform(width, height),
+            Modes::Chertezhnik(executor) => {
+                executor.lock().unwrap().update_transform(width, height)
+            }
+            Modes::Robot(executor) => executor.lock().unwrap().update_transform(width, height),
+        }
+    }
+}
+
+impl PartialEq for Modes {
+    fn eq(&self, other: &Self) -> bool {
+        std::mem::discriminant(self) == std::mem::discriminant(other)
+    }
 }
 
 impl fmt::Display for Modes {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Modes::None => write!(f, "Не выбрано"),
-            Modes::Kuznechik => write!(f, "Кузнечик"),
-            Modes::Vodolei => write!(f, "Водолей"),
-            Modes::Robot => write!(f, "Робот"),
-            Modes::Chertezhnik => write!(f, "Чертежник"),
-            Modes::Cherepaha => write!(f, "Черепаха"),
+            Modes::None(_) => write!(f, "Не выбрано"),
+            Modes::Kuznechik(_) => write!(f, "Кузнечик"),
+            Modes::Vodolei(_) => write!(f, "Водолей"),
+            Modes::Robot(_) => write!(f, "Робот"),
+            Modes::Chertezhnik(_) => write!(f, "Чертежник"),
+            Modes::Cherepaha(_) => write!(f, "Черепаха"),
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct ModesStored {
-    pub robot: Arc<Mutex<dyn Executor>>,
-    pub none: Arc<Mutex<dyn Executor>>,
 }
 
 pub enum VisualMode {
     Dark,
     Light,
+}
+
+pub struct ModesStored {
+    pub none: Modes,
+    pub kuznechik: Modes,
+    pub vodolei: Modes,
+    pub robot: Modes,
+    pub chertezhnik: Modes,
+    pub cherepaha: Modes,
 }
 
 pub struct KumirState {
@@ -54,46 +155,43 @@ pub struct KumirState {
 
 impl KumirState {
     pub fn new(scene: Arc<Mutex<Scene>>, width: f64, height: f64) -> KumirState {
-        let rob = Arc::new(Mutex::new(Robot::new(
+        let none = Modes::None(Arc::new(Mutex::new(NoneSelected::new())));
+        let kuznechik = Modes::Kuznechik(Arc::new(Mutex::new(NoneSelected::new())));
+        let vodolei = Modes::Vodolei(Arc::new(Mutex::new(NoneSelected::new())));
+        let robot = Modes::Robot(Arc::new(Mutex::new(Robot::new(
             9,
             9,
             100.0,
             width / 2.0,
             height / 2.0,
-        )));
-        let none = Arc::new(Mutex::new(NoneSelected::new()));
+        ))));
+        let chertezhnik = Modes::Chertezhnik(Arc::new(Mutex::new(NoneSelected::new())));
+        let cherepaha = Modes::Cherepaha(Arc::new(Mutex::new(NoneSelected::new())));
         KumirState {
             scene: scene,
             width: width,
             height: height,
-            selected_mode: Modes::None,
+            selected_mode: none.clone(),
             modes: ModesStored {
-                robot: rob,
                 none: none,
+                kuznechik: kuznechik,
+                vodolei: vodolei,
+                robot: robot,
+                chertezhnik: chertezhnik,
+                cherepaha: cherepaha,
             },
             visual_mode: VisualMode::Dark,
             min_point: Pos2::new(10.0, 85.0),
         }
     }
 
-    pub fn current_mode(&self) -> MutexGuard<'_, dyn Executor> {
-        match self.selected_mode {
-            Modes::Robot => self.modes.robot.lock().unwrap(),
-            _ => self.modes.none.lock().unwrap(),
-        }
-    }
-
     pub fn add_shapes_to_scene(&mut self) {
-        self.current_mode()
+        self.selected_mode
             .draw_field(&mut self.scene.lock().unwrap());
     }
 
     pub fn update_transform(&mut self, width: f64, height: f64) {
-        self.modes
-            .robot
-            .lock()
-            .unwrap()
-            .update_transform(width, height);
+        self.selected_mode.update_transform(width, height);
     }
 
     pub fn update_min_point(&mut self, pos: Pos2) {
@@ -103,27 +201,27 @@ impl KumirState {
     }
 
     pub fn change_scale(&mut self, scale_delta: f64) {
-        self.current_mode().change_scale(scale_delta);
+        self.selected_mode.change_scale(scale_delta);
     }
 
     pub fn get_scale(&self) -> f64 {
-        self.current_mode().get_scale()
+        self.selected_mode.get_scale()
     }
 
     pub fn base_color(&self) -> Color {
-        self.current_mode().base_color()
+        self.selected_mode.base_color()
     }
 
-    pub fn hover(&self, pos: Option<Pos2>, pixels_per_point: f32) {
+    pub fn hover(&mut self, pos: Option<Pos2>, pixels_per_point: f32) {
         if pos == None {
             return;
         }
 
-        self.current_mode()
+        self.selected_mode
             .hovered((pos.unwrap() - self.min_point).to_pos2(), pixels_per_point);
     }
 
-    pub fn click(&self) {
-        self.current_mode().clicked();
+    pub fn click(&mut self) {
+        self.selected_mode.clicked();
     }
 }
