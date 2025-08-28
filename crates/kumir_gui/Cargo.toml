@@ -27,6 +27,7 @@ pollster = "0.4.0"
 console_log = { version = "*", features = ["color"] }
 wasm-bindgen = { version = "*" }
 wasm-bindgen-futures = "*"
+getrandom = {version = "0.3.3", features = ["wasm_js"]}
 web-sys = { version = "0.3.77", features = [
     'Window',
     'Document',
