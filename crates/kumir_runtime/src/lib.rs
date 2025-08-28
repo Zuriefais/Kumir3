@@ -52,6 +52,7 @@ impl Runtime for Target {
         match self {
             Target::KumirLang(kumir_lang_runtime) => kumir_lang_runtime.run(),
             Target::Python(python_runtime) => python_runtime.run(),
+            #[cfg(not(target_arch = "wasm32"))]
             Target::Wasmtime() => todo!(),
         }
     }
