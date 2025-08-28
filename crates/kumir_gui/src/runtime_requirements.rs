@@ -100,4 +100,8 @@ impl RobotRequirements for GuiRuntimeRequirements {
     fn colored(&self) -> bool {
         call_method_in_enum!(self.mode.clone(), Modes::Robot, colored)
     }
+
+    fn not_colored(&self) -> bool {
+        call_method_in_enum!(self.mode.clone(), Modes::Robot, not_colored)
+    }
 }

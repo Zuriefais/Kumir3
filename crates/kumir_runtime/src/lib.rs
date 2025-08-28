@@ -79,6 +79,7 @@ pub trait RobotRequirements {
     fn wall_above(&self) -> bool;
     fn wall_below(&self) -> bool;
     fn colored(&self) -> bool;
+    fn not_colored(&self) -> bool;
 }
 
 pub trait Runtime {

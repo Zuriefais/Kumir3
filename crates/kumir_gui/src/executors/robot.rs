@@ -476,39 +476,43 @@ impl Robot {
     }
 
     pub fn free_right(&self) -> bool {
-        self.vertical_borders[self.x + 1][self.y]
-    }
-
-    pub fn free_left(&self) -> bool {
-        self.vertical_borders[self.x][self.y]
-    }
-
-    pub fn free_above(&self) -> bool {
-        self.horizontal_borders[self.x][self.y]
-    }
-
-    pub fn free_below(&self) -> bool {
-        self.horizontal_borders[self.x][self.y + 1]
-    }
-
-    pub fn wall_right(&self) -> bool {
         !self.vertical_borders[self.x + 1][self.y]
     }
 
-    pub fn wall_left(&self) -> bool {
+    pub fn free_left(&self) -> bool {
         !self.vertical_borders[self.x][self.y]
     }
 
-    pub fn wall_above(&self) -> bool {
+    pub fn free_above(&self) -> bool {
         !self.horizontal_borders[self.x][self.y]
     }
 
-    pub fn wall_below(&self) -> bool {
+    pub fn free_below(&self) -> bool {
         !self.horizontal_borders[self.x][self.y + 1]
+    }
+
+    pub fn wall_right(&self) -> bool {
+        self.vertical_borders[self.x + 1][self.y]
+    }
+
+    pub fn wall_left(&self) -> bool {
+        self.vertical_borders[self.x][self.y]
+    }
+
+    pub fn wall_above(&self) -> bool {
+        self.horizontal_borders[self.x][self.y]
+    }
+
+    pub fn wall_below(&self) -> bool {
+        self.horizontal_borders[self.x][self.y + 1]
     }
 
     pub fn colored(&self) -> bool {
         self.colored[self.x][self.y]
+    }
+
+    pub fn not_colored(&self) -> bool {
+        !self.colored[self.x][self.y]
     }
 }
 

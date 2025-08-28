@@ -75,4 +75,9 @@ impl RobotRequirements for ConsoleRuntimeRequirements {
         info!("Colored");
         false
     }
+
+    fn not_colored(&self) -> bool {
+        info!("Not colored");
+        true
+    }
 }
