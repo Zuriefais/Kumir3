@@ -573,7 +573,18 @@ impl Expr {
         match self {
             Expr::Literal(literal) => Ok(literal.clone()),
             Expr::Identifier(name) => {
-                if let Some(value) = environment.borrow().get_value(name) {
+                if environment.borrow().get_function(name).is_some() {
+                    let call = FunctionCall {
+                        name: name.to_string(),
+                        args: vec![],
+                    };
+                    match call.eval(environment)? {
+                        FunctionResult::Literal(literal) => Ok(literal),
+                        FunctionResult::Procedure => {
+                            Err(format!("This alg is procedure not function"))
+                        }
+                    }
+                } else if let Some(value) = environment.borrow().get_value(name) {
                     Ok(value.clone())
                 } else {
                     Err(format!("Undefined variable: {name}"))
