@@ -1,0 +1,12 @@
+# Trunk.toml
+
+[watch]
+# Папки для отслеживания изменений
+watch = ["./src"]
+
+[serve]
+# Адрес для запуска сервера
+address = "127.0.0.1"
+port = 8080
+# САМОЕ ВАЖНОЕ: добавляем необходимые заголовки
+headers = { "Cross-Origin-Opener-Policy" = "same-origin", "Cross-Origin-Embedder-Policy" = "require-corp" }
