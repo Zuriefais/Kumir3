@@ -447,7 +447,7 @@ impl Robot {
 
     // Robot API
 
-    pub fn move_robot(&mut self, x: i64, y: i64) {
+    pub fn move_robot(&mut self, x: i64, y: i64) -> bool {
         // #[cfg(unix)]
         // tracy_full::zone!("Move Robot", tracy_full::color::Color::CYAN, true);
         let new_x = self.x as i64 + x;
@@ -466,10 +466,49 @@ impl Robot {
         } else {
             self.y = new_y as usize;
         }
+
+        true
     }
 
-    pub fn paint(&mut self) {
+    pub fn paint(&mut self) -> bool {
         self.colored[self.x][self.y] = true;
+        true
+    }
+
+    pub fn free_right(&self) -> bool {
+        self.vertical_borders[self.x + 1][self.y]
+    }
+
+    pub fn free_left(&self) -> bool {
+        self.vertical_borders[self.x][self.y]
+    }
+
+    pub fn free_above(&self) -> bool {
+        self.horizontal_borders[self.x][self.y]
+    }
+
+    pub fn free_below(&self) -> bool {
+        self.horizontal_borders[self.x][self.y + 1]
+    }
+
+    pub fn wall_right(&self) -> bool {
+        !self.vertical_borders[self.x + 1][self.y]
+    }
+
+    pub fn wall_left(&self) -> bool {
+        !self.vertical_borders[self.x][self.y]
+    }
+
+    pub fn wall_above(&self) -> bool {
+        !self.horizontal_borders[self.x][self.y]
+    }
+
+    pub fn wall_below(&self) -> bool {
+        !self.horizontal_borders[self.x][self.y + 1]
+    }
+
+    pub fn colored(&self) -> bool {
+        self.colored[self.x][self.y]
     }
 }
 

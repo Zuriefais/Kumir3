@@ -1,5 +1,5 @@
 use crate::{Lang, Runtime, RuntimeRequirements};
-use log::info;
+use log::{error, info};
 use rustpython::vm::{PyObject, PyResult, TryFromBorrowedObject, VirtualMachine};
 use rustpython_vm::{AsObject, compiler, scope::Scope};
 
@@ -7,6 +7,26 @@ pub struct PythonRuntime {
     requirements: RuntimeRequirements,
     interpreter: rustpython_vm::Interpreter,
     code: String,
+}
+
+macro_rules! register {
+    ($vm:expr, $scope:expr, $requirements:expr, $name:ident) => {
+        let req = $requirements.clone();
+        let func = $vm.new_function(stringify!($name), move || req.$name());
+        match $scope
+            .globals
+            .set_item(stringify!($name), func.into(), &$vm)
+        {
+            Ok(_) => {}
+            Err(err) => {
+                error!(
+                    "Failed to register function {}: {:?}",
+                    stringify!($name),
+                    err
+                );
+            }
+        }
+    };
 }
 
 impl Runtime for PythonRuntime {
@@ -27,11 +47,20 @@ impl Runtime for PythonRuntime {
         self.interpreter.enter(|vm: &VirtualMachine| {
             let scope = vm.new_scope_with_builtins();
 
-            register_move_up(vm, &scope, self.requirements.clone());
-            register_move_down(vm, &scope, self.requirements.clone());
-            register_move_right(vm, &scope, self.requirements.clone());
-            register_move_left(vm, &scope, self.requirements.clone());
-            register_paint(vm, &scope, self.requirements.clone());
+            register!(vm, &scope, self.requirements.clone(), move_up);
+            register!(vm, &scope, self.requirements.clone(), move_down);
+            register!(vm, &scope, self.requirements.clone(), move_left);
+            register!(vm, &scope, self.requirements.clone(), move_right);
+            register!(vm, &scope, self.requirements.clone(), paint);
+            register!(vm, &scope, self.requirements.clone(), free_right);
+            register!(vm, &scope, self.requirements.clone(), free_left);
+            register!(vm, &scope, self.requirements.clone(), free_above);
+            register!(vm, &scope, self.requirements.clone(), free_below);
+            register!(vm, &scope, self.requirements.clone(), wall_left);
+            register!(vm, &scope, self.requirements.clone(), wall_right);
+            register!(vm, &scope, self.requirements.clone(), wall_above);
+            register!(vm, &scope, self.requirements.clone(), wall_below);
+            register!(vm, &scope, self.requirements.clone(), colored);
 
             let source = self.code.as_str();
             let code_obj = vm
@@ -44,41 +73,4 @@ impl Runtime for PythonRuntime {
             Ok(())
         })
     }
-}
-
-fn register_move_up(vm: &VirtualMachine, scope: &Scope, requirements: RuntimeRequirements) {
-    let move_up = vm.new_function("move_up", move || requirements.move_up());
-    scope
-        .globals
-        .set_item("move_up", move_up.into(), &vm)
-        .unwrap();
-}
-
-fn register_move_down(vm: &VirtualMachine, scope: &Scope, requirements: RuntimeRequirements) {
-    let move_down = vm.new_function("move_down", move || requirements.move_down());
-    scope
-        .globals
-        .set_item("move_down", move_down.into(), &vm)
-        .unwrap();
-}
-
-fn register_move_right(vm: &VirtualMachine, scope: &Scope, requirements: RuntimeRequirements) {
-    let move_right = vm.new_function("move_right", move || requirements.move_right());
-    scope
-        .globals
-        .set_item("move_right", move_right.into(), &vm)
-        .unwrap();
-}
-
-fn register_move_left(vm: &VirtualMachine, scope: &Scope, requirements: RuntimeRequirements) {
-    let move_left = vm.new_function("move_left", move || requirements.move_left());
-    scope
-        .globals
-        .set_item("move_left", move_left.into(), &vm)
-        .unwrap();
-}
-
-fn register_paint(vm: &VirtualMachine, scope: &Scope, requirements: RuntimeRequirements) {
-    let paint = vm.new_function("paint", move || requirements.paint());
-    scope.globals.set_item("paint", paint.into(), &vm).unwrap();
 }

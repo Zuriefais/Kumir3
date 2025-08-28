@@ -70,6 +70,15 @@ pub trait RobotRequirements {
     fn move_left(&self);
     fn move_right(&self);
     fn paint(&self);
+    fn free_right(&self) -> bool;
+    fn free_left(&self) -> bool;
+    fn free_above(&self) -> bool;
+    fn free_below(&self) -> bool;
+    fn wall_left(&self) -> bool;
+    fn wall_right(&self) -> bool;
+    fn wall_above(&self) -> bool;
+    fn wall_below(&self) -> bool;
+    fn colored(&self) -> bool;
 }
 
 pub trait Runtime {
