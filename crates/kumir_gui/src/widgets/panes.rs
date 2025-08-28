@@ -114,7 +114,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                 });
 
                 ui.horizontal(|ui| {
-                    ui.label("Изменить время между действиями исполнителя: ");
+                    ui.label("Задержка действий исполнителя: ");
                     ui.add(egui::DragValue::new(&mut options.sleep_duration).speed(1));
                 });
 
