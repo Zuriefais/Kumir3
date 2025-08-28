@@ -2,11 +2,14 @@ use std::sync::Mutex;
 
 use kumir_runtime::{RobotRequirements, RuntimeRequirementsTrait};
 use log::info;
+use std::time::Duration;
+use wasm_thread as thread;
 
 use crate::kumir_state::Modes;
 
 pub struct GuiRuntimeRequirements {
     pub mode: Modes,
+    pub sleep_duration: Duration,
 }
 
 impl RuntimeRequirementsTrait for GuiRuntimeRequirements {
@@ -24,6 +27,8 @@ impl RobotRequirements for GuiRuntimeRequirements {
             }
             _ => (),
         }
+
+        thread::sleep(self.sleep_duration);
     }
 
     fn move_down(&self) {
@@ -34,6 +39,8 @@ impl RobotRequirements for GuiRuntimeRequirements {
             }
             _ => (),
         }
+
+        thread::sleep(self.sleep_duration);
     }
 
     fn move_left(&self) {
@@ -44,6 +51,8 @@ impl RobotRequirements for GuiRuntimeRequirements {
             }
             _ => (),
         }
+
+        thread::sleep(self.sleep_duration);
     }
 
     fn move_right(&self) {
@@ -54,6 +63,8 @@ impl RobotRequirements for GuiRuntimeRequirements {
             }
             _ => (),
         }
+
+        thread::sleep(self.sleep_duration);
     }
 
     fn paint(&self) {
@@ -64,5 +75,7 @@ impl RobotRequirements for GuiRuntimeRequirements {
             }
             _ => (),
         }
+
+        thread::sleep(self.sleep_duration);
     }
 }

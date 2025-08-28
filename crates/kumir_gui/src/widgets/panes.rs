@@ -1,12 +1,15 @@
 use crate::kumir_state::{KumirState, Modes};
 use crate::runtime_requirements::GuiRuntimeRequirements;
 use crate::widgets::robot_gui::RobotWidget;
+use egui::was_tooltip_open_last_frame;
 use egui::{Align2, Pos2, Sense, TextureId, Vec2, load::SizedTexture};
 use egui_extras::syntax_highlighting::highlight;
 use kumir_runtime::{Lang, Runtime};
 use log::{error, info};
 use std::fmt;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use wasm_thread as thread;
 
 #[derive(Default)]
 pub struct VelloWindowOptions {
@@ -19,6 +22,7 @@ pub struct VelloWindowOptions {
 pub struct IDEWindowOptions {
     code: String,
     lang: Lang,
+    sleep_duration: u64,
 }
 
 pub enum Pane {
@@ -110,26 +114,40 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                 });
 
                 ui.horizontal(|ui| {
+                    ui.label("Изменить время между действиями исполнителя: ");
+                    ui.add(egui::DragValue::new(&mut options.sleep_duration).speed(1));
+                });
+
+                ui.horizontal(|ui| {
                     if ui.add(egui::Button::new("Запустить")).clicked() {
-                        info!("Starting runtime");
-                        let mut target = kumir_runtime::Target::init(
-                            Arc::new(GuiRuntimeRequirements {
-                                mode: self.kumir_state.selected_mode.clone(),
-                            }),
-                            options.lang.clone(),
-                            options.code.clone(),
-                        )
-                        .unwrap();
-                        if let Err(err) = target.run() {
-                            error!("{err}")
-                        };
-                        info!("Something should run");
+                        let mode = self.kumir_state.selected_mode.clone();
+                        let lang = options.lang.clone();
+                        let code = options.code.clone();
+                        let duration = options.sleep_duration.clone();
+                        thread::spawn(move || {
+                            info!("Starting runtime");
+
+                            let mut target = kumir_runtime::Target::init(
+                                Arc::new(GuiRuntimeRequirements {
+                                    mode: mode,
+                                    sleep_duration: Duration::from_millis(duration),
+                                }),
+                                lang,
+                                code,
+                            )
+                            .unwrap();
+                            if let Err(err) = target.run() {
+                                error!("{err}")
+                            };
+                            info!("Something should run");
+                        });
                     }
 
                     if ui.add(egui::Button::new("Остановить")).clicked() {
                         info!("Something should stop");
                     }
                 });
+
                 let mut layouter = |ui: &egui::Ui, buf: &str, wrap_width: f32| {
                     let lang = format!("{}", options.lang);
                     let mut layout_job =
@@ -225,6 +243,7 @@ pub fn create_tree(vello_options: Arc<Mutex<VelloWindowOptions>>) -> egui_tiles:
     tabs.push(tiles.insert_pane(Pane::IDE(IDEWindowOptions {
         code: "print(\"Hello, world!\")\n".to_string(),
         lang: Lang::Python,
+        sleep_duration: 200,
     })));
 
     let root = tiles.insert_tab_tile(tabs);
