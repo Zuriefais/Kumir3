@@ -10,7 +10,7 @@ egui_extras = { version = "0.31.1", features = ["syntect"] }
 egui-wgpu = { version = "0.31.1", features = ["winit"] }
 egui-winit = { version = "0.31.1", default-features = false }
 egui_tiles = "0.12.0"
-kumir_runtime = {workspace = true}
+kumir_runtime = { workspace = true }
 
 winit = "0.30.9"
 wasm_thread = "*"
@@ -27,7 +27,7 @@ pollster = "0.4.0"
 console_log = { version = "*", features = ["color"] }
 wasm-bindgen = { version = "*" }
 wasm-bindgen-futures = "*"
-getrandom = {version = "0.3.3", features = ["wasm_js"]}
+getrandom = { version = "0.3.3", features = ["wasm_js"] }
 web-sys = { version = "0.3.77", features = [
     'Window',
     'Document',
