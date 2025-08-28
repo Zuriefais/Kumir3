@@ -445,6 +445,8 @@ impl Robot {
         }
     }
 
+    // Robot API
+
     pub fn move_robot(&mut self, x: i64, y: i64) {
         // #[cfg(unix)]
         // tracy_full::zone!("Move Robot", tracy_full::color::Color::CYAN, true);
@@ -464,6 +466,10 @@ impl Robot {
         } else {
             self.y = new_y as usize;
         }
+    }
+
+    pub fn paint(&mut self) {
+        self.colored[self.x][self.y] = true;
     }
 }
 

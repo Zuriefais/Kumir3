@@ -3,7 +3,7 @@ use crate::runtime_requirements::GuiRuntimeRequirements;
 use crate::widgets::robot_gui::RobotWidget;
 use egui::{Align2, Pos2, Sense, TextureId, Vec2, load::SizedTexture};
 use egui_extras::syntax_highlighting::highlight;
-use kumir_runtime::Runtime;
+use kumir_runtime::{Lang, Runtime};
 use log::{error, info};
 use std::fmt;
 use std::sync::{Arc, Mutex};
@@ -16,20 +16,6 @@ pub struct VelloWindowOptions {
     pub changed: bool,
 }
 
-#[derive(PartialEq)]
-pub enum Lang {
-    Python,
-    KumirLang,
-}
-
-impl fmt::Display for Lang {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Lang::Python => write!(f, "Python"),
-            Lang::KumirLang => write!(f, "КуМир"),
-        }
-    }
-}
 pub struct IDEWindowOptions {
     code: String,
     lang: Lang,
@@ -110,7 +96,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                     .selected_text(format!("{}", options.lang))
                     .show_ui(ui, |ui| {
                         ui.selectable_value(&mut options.lang, Lang::Python, "Python");
-                        ui.selectable_value(&mut options.lang, Lang::KumirLang, "Кумир");
+                        ui.selectable_value(&mut options.lang, Lang::Kumir, "Кумир");
                     });
 
                 // let mut theme = CodeTheme::from_memory(ui.ctx(), ui.style());
@@ -126,18 +112,18 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                 ui.horizontal(|ui| {
                     if ui.add(egui::Button::new("Запустить")).clicked() {
                         info!("Starting runtime");
-                        // let mut target = kumir_runtime::Target::init(
-                        //     Arc::new(GuiRuntimeRequirements {
-                        //         robot: self.kumir_state.modes.robot,
-                        //     }),
-                        //     kumir_runtime::Lang::Kumir,
-                        //     options.code,
-                        // )
-                        // .unwrap();
-                        // if let Err(err) = target.run() {
-                        //     error!("{err}")
-                        // };
-                        // info!("Something should run");
+                        let mut target = kumir_runtime::Target::init(
+                            Arc::new(GuiRuntimeRequirements {
+                                mode: self.kumir_state.selected_mode.clone(),
+                            }),
+                            options.lang.clone(),
+                            options.code.clone(),
+                        )
+                        .unwrap();
+                        if let Err(err) = target.run() {
+                            error!("{err}")
+                        };
+                        info!("Something should run");
                     }
 
                     if ui.add(egui::Button::new("Остановить")).clicked() {

@@ -6,8 +6,10 @@ edition = "2024"
 [dependencies]
 kumir_lang = { workspace = true }
 log = { workspace = true }
-indexmap = {workspace = true}
+indexmap = { workspace = true }
 env_logger = "0.11.8"
+rustpython = "*"
+rustpython-vm = "*"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 #wasmtime = "0.35.0"

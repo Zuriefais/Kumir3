@@ -3,10 +3,10 @@ use std::sync::Mutex;
 use kumir_runtime::{RobotRequirements, RuntimeRequirementsTrait};
 use log::info;
 
-use crate::executors::robot::Robot;
+use crate::kumir_state::Modes;
 
 pub struct GuiRuntimeRequirements {
-    pub robot: Mutex<Robot>,
+    pub mode: Modes,
 }
 
 impl RuntimeRequirementsTrait for GuiRuntimeRequirements {
@@ -17,27 +17,52 @@ impl RuntimeRequirementsTrait for GuiRuntimeRequirements {
 
 impl RobotRequirements for GuiRuntimeRequirements {
     fn move_up(&self) {
-        let mut robot = self.robot.lock().unwrap();
-        robot.move_robot(0, 1);
+        match self.mode.clone() {
+            Modes::Robot(executor) => {
+                let mut robot = executor.lock().unwrap();
+                robot.move_robot(0, -1);
+            }
+            _ => (),
+        }
     }
 
     fn move_down(&self) {
-        let mut robot = self.robot.lock().unwrap();
-        robot.move_robot(0, -1);
+        match self.mode.clone() {
+            Modes::Robot(executor) => {
+                let mut robot = executor.lock().unwrap();
+                robot.move_robot(0, 1);
+            }
+            _ => (),
+        }
     }
 
     fn move_left(&self) {
-        let mut robot = self.robot.lock().unwrap();
-        robot.move_robot(-1, 0);
+        match self.mode.clone() {
+            Modes::Robot(executor) => {
+                let mut robot = executor.lock().unwrap();
+                robot.move_robot(-1, 0);
+            }
+            _ => (),
+        }
     }
 
     fn move_right(&self) {
-        let mut robot = self.robot.lock().unwrap();
-        robot.move_robot(1, 0);
+        match self.mode.clone() {
+            Modes::Robot(executor) => {
+                let mut robot = executor.lock().unwrap();
+                robot.move_robot(1, 0);
+            }
+            _ => (),
+        }
     }
 
     fn paint(&self) {
-        let mut robot = self.robot.lock().unwrap();
-        todo!("Impl Paint in Robot obj")
+        match self.mode.clone() {
+            Modes::Robot(executor) => {
+                let mut robot = executor.lock().unwrap();
+                robot.paint();
+            }
+            _ => (),
+        }
     }
 }

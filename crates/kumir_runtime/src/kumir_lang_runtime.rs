@@ -58,7 +58,7 @@ fn register_move_down(interpreter: &mut Interpreter, requirements: RuntimeRequir
             params: IndexMap::new(),
             return_type: None,
             native_function: Rc::new(RefCell::new(move |_: &Rc<RefCell<Environment>>| {
-                requirements.move_up();
+                requirements.move_down();
                 Ok(None)
             })),
         },
@@ -72,7 +72,7 @@ fn register_move_left(interpreter: &mut Interpreter, requirements: RuntimeRequir
             params: IndexMap::new(),
             return_type: None,
             native_function: Rc::new(RefCell::new(move |_: &Rc<RefCell<Environment>>| {
-                requirements.move_up();
+                requirements.move_left();
                 Ok(None)
             })),
         },
@@ -86,7 +86,7 @@ fn register_move_right(interpreter: &mut Interpreter, requirements: RuntimeRequi
             params: IndexMap::new(),
             return_type: None,
             native_function: Rc::new(RefCell::new(move |_: &Rc<RefCell<Environment>>| {
-                requirements.move_up();
+                requirements.move_right();
                 Ok(None)
             })),
         },
@@ -100,7 +100,7 @@ fn register_paint(interpreter: &mut Interpreter, requirements: RuntimeRequiremen
             params: IndexMap::new(),
             return_type: None,
             native_function: Rc::new(RefCell::new(move |_: &Rc<RefCell<Environment>>| {
-                requirements.move_up();
+                requirements.paint();
                 Ok(None)
             })),
         },
