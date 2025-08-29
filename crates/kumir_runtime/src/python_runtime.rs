@@ -1,7 +1,7 @@
 use crate::{Lang, Runtime, RuntimeRequirements};
 use log::{error, info};
-use rustpython::vm::{PyObject, PyResult, TryFromBorrowedObject, VirtualMachine};
-use rustpython_vm::{AsObject, compiler, scope::Scope};
+use rustpython::vm::VirtualMachine;
+use rustpython_vm::{AsObject, compiler};
 
 pub struct PythonRuntime {
     requirements: RuntimeRequirements,
@@ -9,21 +9,27 @@ pub struct PythonRuntime {
     code: String,
 }
 
-macro_rules! register {
-    ($vm:expr, $scope:expr, $requirements:expr, $name:ident) => {
-        let req = $requirements.clone();
-        let func = $vm.new_function(stringify!($name), move || req.$name());
-        match $scope
-            .globals
-            .set_item(stringify!($name), func.into(), &$vm)
-        {
+macro_rules! register_module {
+    ($vm:expr, $scope:expr, $requirements:expr, $module_name:ident, $($name:ident),+) => {
+        let module_dict = $vm.ctx.new_dict();
+        $(
+            let req = $requirements.clone();
+            let func = $vm.new_function(stringify!($name), move || req.$name());
+            module_dict.set_item(stringify!($name), func.into(), &$vm).unwrap();
+        )+
+        let module = $vm.new_module(stringify!($module_name), module_dict, None);
+        let sys_modules = $vm.sys_module.as_object().get_attr("modules", &$vm).unwrap();
+        match sys_modules.set_item(stringify!($module_name), module.into(), &$vm) {
             Ok(_) => {}
             Err(err) => {
                 error!(
-                    "Failed to register function {}: {:?}",
-                    stringify!($name),
-                    err
+                    "Failed to register module {} with functions:",
+                    stringify!($module_name),
                 );
+                $(
+                    error!("\t{}", stringify!($name));
+                )+
+                error!("Error occured: {:?}", err);
             }
         }
     };
@@ -47,20 +53,27 @@ impl Runtime for PythonRuntime {
         self.interpreter.enter(|vm: &VirtualMachine| {
             let scope = vm.new_scope_with_builtins();
 
-            register!(vm, &scope, self.requirements.clone(), move_up);
-            register!(vm, &scope, self.requirements.clone(), move_down);
-            register!(vm, &scope, self.requirements.clone(), move_left);
-            register!(vm, &scope, self.requirements.clone(), move_right);
-            register!(vm, &scope, self.requirements.clone(), paint);
-            register!(vm, &scope, self.requirements.clone(), free_right);
-            register!(vm, &scope, self.requirements.clone(), free_left);
-            register!(vm, &scope, self.requirements.clone(), free_above);
-            register!(vm, &scope, self.requirements.clone(), free_below);
-            register!(vm, &scope, self.requirements.clone(), wall_left);
-            register!(vm, &scope, self.requirements.clone(), wall_right);
-            register!(vm, &scope, self.requirements.clone(), wall_above);
-            register!(vm, &scope, self.requirements.clone(), wall_below);
-            register!(vm, &scope, self.requirements.clone(), colored);
+            register_module!(
+                vm,
+                &scope,
+                self.requirements.clone(),
+                robot,
+                move_up,
+                move_down,
+                move_left,
+                move_right,
+                paint,
+                free_right,
+                free_left,
+                free_above,
+                free_below,
+                wall_left,
+                wall_right,
+                wall_above,
+                wall_below,
+                colored,
+                not_colored
+            );
 
             let source = self.code.as_str();
             let code_obj = vm
@@ -68,7 +81,7 @@ impl Runtime for PythonRuntime {
                 .map_err(|err| format!("{:?}", vm.new_syntax_error(&err, Some(source))))?;
 
             vm.run_code_obj(code_obj, scope)
-                .map_err(|err| format!("{:?}", err))?;
+                .map_err(|err| format!("{:?}", err.traceback()))?;
 
             Ok(())
         })
