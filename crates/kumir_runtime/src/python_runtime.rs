@@ -1,12 +1,35 @@
 use crate::{Lang, Runtime, RuntimeRequirements};
 use log::{error, info};
 use rustpython::vm::VirtualMachine;
-use rustpython_vm::{AsObject, compiler};
+use rustpython_vm::{
+    AsObject,
+    builtins::{PyBaseException, PyStr},
+    compiler,
+    object::PyRef,
+};
 
 pub struct PythonRuntime {
     requirements: RuntimeRequirements,
     interpreter: rustpython_vm::Interpreter,
     code: String,
+}
+
+fn parse_rustpython_error(err: PyRef<PyBaseException>) -> String {
+    let error_text = match err.get_arg(0) {
+        Some(arg) => match arg.downcast::<PyStr>() {
+            Ok(msg) => msg.to_string(),
+            Err(_) => "Unknown error".to_string(),
+        },
+        None => String::from("Empty error message"),
+    };
+
+    let traceback = format!(
+        "Traceback:\n\tLine number: {lineno}\n\tToken: {lasti}",
+        lineno = err.traceback().unwrap().lineno,
+        lasti = err.traceback().unwrap().lasti
+    );
+
+    format!("{error_text}\n{traceback}")
 }
 
 macro_rules! register_module {
@@ -81,7 +104,7 @@ impl Runtime for PythonRuntime {
                 .map_err(|err| format!("{:?}", vm.new_syntax_error(&err, Some(source))))?;
 
             vm.run_code_obj(code_obj, scope)
-                .map_err(|err| format!("{:?}", err.traceback()))?;
+                .map_err(|err| parse_rustpython_error(err))?;
 
             Ok(())
         })
