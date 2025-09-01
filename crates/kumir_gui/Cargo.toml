@@ -24,6 +24,7 @@ env_logger = "0.11.8"
 pollster = "0.4.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1.7"
 console_log = { version = "*", features = ["color"] }
 wasm-bindgen = { version = "*" }
 wasm-bindgen-futures = "*"

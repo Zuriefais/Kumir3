@@ -19,6 +19,9 @@ pub fn main() {
     }
     #[cfg(target_arch = "wasm32")]
     {
+        extern crate console_error_panic_hook;
+        use std::panic;
+        panic::set_hook(Box::new(console_error_panic_hook::hook));
         console_log::init_with_level(log::Level::Trace);
     }
     info!("Starting App");
