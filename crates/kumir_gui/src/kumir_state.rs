@@ -191,7 +191,12 @@ impl KumirState {
     }
 
     pub fn update_transform(&mut self, width: f64, height: f64) {
-        self.selected_mode.update_transform(width, height);
+        self.modes.cherepaha.update_transform(width, height);
+        self.modes.chertezhnik.update_transform(width, height);
+        self.modes.kuznechik.update_transform(width, height);
+        self.modes.none.update_transform(width, height);
+        self.modes.robot.update_transform(width, height);
+        self.modes.vodolei.update_transform(width, height);
     }
 
     pub fn update_min_point(&mut self, pos: Pos2) {
