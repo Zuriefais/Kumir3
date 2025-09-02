@@ -3,9 +3,24 @@
     <head>
         <meta charset="utf-8" />
         <title>Kumir 3</title>
-    <link rel="modulepreload" href="/Kumir3/kumir_gui-dfc5a5d1f27492ad.js" crossorigin="anonymous" integrity="sha384-8X45DEfbwvuDa3flCnqv5Vph0k0g4f8sEYpufouCqHfkoyvyxR3aNLf57MarZs+m"><link rel="preload" href="/Kumir3/kumir_gui-dfc5a5d1f27492ad_bg.wasm" crossorigin="anonymous" integrity="sha384-Fj+q2uyz/YfqhoKKX3vLTWDUWdf3nKOgaqBHHYZUsrgcJbw4FGKmrIav1A2yKV2s" as="fetch" type="application/wasm"></head>
+        <link
+            rel="modulepreload"
+            href="/Kumir3/kumir_gui-dfc5a5d1f27492ad.js"
+            crossorigin="anonymous"
+            integrity="sha384-8X45DEfbwvuDa3flCnqv5Vph0k0g4f8sEYpufouCqHfkoyvyxR3aNLf57MarZs+m"
+        />
+        <link
+            rel="preload"
+            href="/Kumir3/kumir_gui-dfc5a5d1f27492ad_bg.wasm"
+            crossorigin="anonymous"
+            integrity="sha384-Fj+q2uyz/YfqhoKKX3vLTWDUWdf3nKOgaqBHHYZUsrgcJbw4FGKmrIav1A2yKV2s"
+            as="fetch"
+            type="application/wasm"
+        />
+    </head>
     <body>
         <canvas id="canvas"></canvas>
+        <script src="coi-serviceworker.js"></script>
         <script>
             const canvas = document.getElementById("canvas");
             canvas.width = window.innerWidth;
@@ -34,16 +49,20 @@
                 outline: none;
             }
         </style>
-    
-<script type="module">
-import init, * as bindings from '/Kumir3/kumir_gui-dfc5a5d1f27492ad.js';
-const wasm = await init({ module_or_path: '/Kumir3/kumir_gui-dfc5a5d1f27492ad_bg.wasm' });
 
+        <script type="module">
+            import init, * as bindings from "/Kumir3/kumir_gui-dfc5a5d1f27492ad.js";
+            const wasm = await init({
+                module_or_path: "/Kumir3/kumir_gui-dfc5a5d1f27492ad_bg.wasm",
+            });
 
-window.wasmBindings = bindings;
+            window.wasmBindings = bindings;
 
-
-dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
-
-</script></body>
+            dispatchEvent(
+                new CustomEvent("TrunkApplicationStarted", {
+                    detail: { wasm },
+                }),
+            );
+        </script>
+    </body>
 </html>
