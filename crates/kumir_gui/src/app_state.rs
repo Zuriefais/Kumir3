@@ -252,7 +252,7 @@ impl AppState {
                     base_color: self.kumir_gui.base_color(),
                     width,
                     height,
-                    antialiasing_method: AaConfig::Msaa16,
+                    antialiasing_method: AaConfig::Area,
                 },
             )
             .expect("failed to render to surface");
