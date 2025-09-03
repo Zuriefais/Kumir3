@@ -1,7 +1,8 @@
 use crate::executors::Executor;
-use crate::kumir_state::Modes;
 use egui::{Pos2, Widget};
+use kumir_runtime::FuncResult;
 use log::info;
+use std::any::Any;
 use std::sync::{Arc, Mutex};
 use vello::Scene;
 use vello::kurbo::{Affine, Line, Point, Rect, Stroke};
@@ -447,22 +448,18 @@ impl Robot {
 
     // Robot API
 
-    pub fn move_robot(&mut self, x: i64, y: i64) -> bool {
+    fn move_robot(&mut self, x: i64, y: i64) -> bool {
         // #[cfg(unix)]
         // tracy_full::zone!("Move Robot", tracy_full::color::Color::CYAN, true);
         let new_x = self.x as i64 + x;
         let new_y = self.y as i64 + y;
-        if new_x >= self.width as i64 {
-            self.x = self.width - 1;
-        } else if new_x < 0 {
-            self.x = 0;
+        if new_x >= self.width as i64 || new_x < 0 {
+            return false;
         } else {
             self.x = new_x as usize;
         }
-        if new_y >= self.height as i64 {
-            self.y = self.height - 1;
-        } else if new_y < 0 {
-            self.y = 0;
+        if new_y >= self.height as i64 || new_y < 0 {
+            return false;
         } else {
             self.y = new_y as usize;
         }
@@ -470,49 +467,81 @@ impl Robot {
         true
     }
 
-    pub fn paint(&mut self) -> bool {
+    pub fn move_right(&mut self) -> FuncResult<()> {
+        if self.free_right().unwrap().unwrap() && self.move_robot(1, 0) {
+            Ok(None)
+        } else {
+            Err("Движение в стену".to_string())
+        }
+    }
+
+    pub fn move_left(&mut self) -> FuncResult<()> {
+        if self.free_left().unwrap().unwrap() && self.move_robot(-1, 0) {
+            Ok(None)
+        } else {
+            Err("Движение в стену".to_string())
+        }
+    }
+
+    pub fn move_up(&mut self) -> FuncResult<()> {
+        if self.free_above().unwrap().unwrap() && self.move_robot(0, -1) {
+            Ok(None)
+        } else {
+            Err("Движение в стену".to_string())
+        }
+    }
+
+    pub fn move_down(&mut self) -> FuncResult<()> {
+        if self.free_below().unwrap().unwrap() && self.move_robot(0, 1) {
+            Ok(None)
+        } else {
+            Err("Движение в стену".to_string())
+        }
+    }
+
+    pub fn paint(&mut self) -> FuncResult<()> {
         self.colored[self.x][self.y] = true;
-        true
+        Ok(None)
     }
 
-    pub fn free_right(&self) -> bool {
-        !self.vertical_borders[self.x + 1][self.y]
+    pub fn free_right(&self) -> FuncResult<bool> {
+        Ok(Some(!self.vertical_borders[self.x + 1][self.y]))
     }
 
-    pub fn free_left(&self) -> bool {
-        !self.vertical_borders[self.x][self.y]
+    pub fn free_left(&self) -> FuncResult<bool> {
+        Ok(Some(!self.vertical_borders[self.x][self.y]))
     }
 
-    pub fn free_above(&self) -> bool {
-        !self.horizontal_borders[self.x][self.y]
+    pub fn free_above(&self) -> FuncResult<bool> {
+        Ok(Some(!self.horizontal_borders[self.x][self.y]))
     }
 
-    pub fn free_below(&self) -> bool {
-        !self.horizontal_borders[self.x][self.y + 1]
+    pub fn free_below(&self) -> FuncResult<bool> {
+        Ok(Some(!self.horizontal_borders[self.x][self.y + 1]))
     }
 
-    pub fn wall_right(&self) -> bool {
-        self.vertical_borders[self.x + 1][self.y]
+    pub fn wall_right(&self) -> FuncResult<bool> {
+        Ok(Some(self.vertical_borders[self.x + 1][self.y]))
     }
 
-    pub fn wall_left(&self) -> bool {
-        self.vertical_borders[self.x][self.y]
+    pub fn wall_left(&self) -> FuncResult<bool> {
+        Ok(Some(self.vertical_borders[self.x][self.y]))
     }
 
-    pub fn wall_above(&self) -> bool {
-        self.horizontal_borders[self.x][self.y]
+    pub fn wall_above(&self) -> FuncResult<bool> {
+        Ok(Some(self.horizontal_borders[self.x][self.y]))
     }
 
-    pub fn wall_below(&self) -> bool {
-        self.horizontal_borders[self.x][self.y + 1]
+    pub fn wall_below(&self) -> FuncResult<bool> {
+        Ok(Some(self.horizontal_borders[self.x][self.y + 1]))
     }
 
-    pub fn colored(&self) -> bool {
-        self.colored[self.x][self.y]
+    pub fn colored(&self) -> FuncResult<bool> {
+        Ok(Some(self.colored[self.x][self.y]))
     }
 
-    pub fn not_colored(&self) -> bool {
-        !self.colored[self.x][self.y]
+    pub fn not_colored(&self) -> FuncResult<bool> {
+        Ok(Some(!self.colored[self.x][self.y]))
     }
 }
 

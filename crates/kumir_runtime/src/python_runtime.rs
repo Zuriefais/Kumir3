@@ -5,7 +5,7 @@ use rustpython_vm::{
     AsObject,
     builtins::{PyBaseException, PyStr},
     compiler,
-    object::PyRef,
+    object::{PyObjectRef, PyRef},
 };
 
 pub struct PythonRuntime {
@@ -40,7 +40,22 @@ macro_rules! register_module {
 
         $(
             let req = $requirements.clone();
-            let func = $vm.new_function(stringify!($name), move || req.$name());
+            let func = $vm.new_function(stringify!($name), move |vm: &VirtualMachine| -> PyResult<PyObjectRef> {
+                match req.$name() {
+                    Err(arg) => {
+                        Err(vm.new_runtime_error(arg))
+                    },
+                    Ok(arg) => {
+                        match arg {
+                            Some(result) => {
+                                Ok(vm.new_pyobj(result))
+                            },
+                            None => Ok(vm.new_pyobj(vm.ctx.none())),
+                        }
+                    }
+
+                }
+            });
             module_dict.set_item(stringify!($name), func.into(), &$vm).unwrap();
         )+
 

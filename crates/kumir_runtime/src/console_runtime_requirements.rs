@@ -1,6 +1,6 @@
 use log::info;
 
-use crate::{RobotRequirements, RuntimeRequirementsTrait};
+use crate::{FuncResult, RobotRequirements, RuntimeRequirementsTrait};
 
 pub struct ConsoleRuntimeRequirements;
 
@@ -11,73 +11,78 @@ impl RuntimeRequirementsTrait for ConsoleRuntimeRequirements {
 }
 
 impl RobotRequirements for ConsoleRuntimeRequirements {
-    fn move_up(&self) {
-        info!("Move up")
+    fn move_up(&self) -> FuncResult<()> {
+        info!("Move up");
+        Ok(None)
     }
 
-    fn move_down(&self) {
-        info!("Move down")
+    fn move_down(&self) -> FuncResult<()> {
+        info!("Move down");
+        Ok(None)
     }
 
-    fn move_left(&self) {
-        info!("Move left")
+    fn move_left(&self) -> FuncResult<()> {
+        info!("Move left");
+        Ok(None)
     }
 
-    fn move_right(&self) {
-        info!("Move right")
+    fn move_right(&self) -> FuncResult<()> {
+        info!("Move right");
+        Ok(None)
     }
 
-    fn paint(&self) {
-        info!("Painting")
+    fn paint(&self) -> FuncResult<()> {
+        info!("Painting");
+        Ok(None)
     }
 
-    fn free_above(&self) -> bool {
+    fn free_above(&self) -> FuncResult<bool> {
         info!("Free above");
-        true
+        Ok(Some(true))
     }
 
-    fn free_below(&self) -> bool {
+    fn free_below(&self) -> FuncResult<bool> {
         info!("Free below");
-        true
+        Ok(Some(true))
     }
 
-    fn free_left(&self) -> bool {
+    fn free_left(&self) -> FuncResult<bool> {
         info!("Free left");
-        true
+        Ok(Some(true))
     }
 
-    fn free_right(&self) -> bool {
+    fn free_right(&self) -> FuncResult<bool> {
         info!("Free right");
-        true
+        Ok(Some(true))
     }
 
-    fn wall_above(&self) -> bool {
+    fn wall_above(&self) -> FuncResult<bool> {
         info!("Wall above");
-        false
+        Ok(Some(false))
     }
 
-    fn wall_below(&self) -> bool {
+    fn wall_below(&self) -> FuncResult<bool> {
         info!("Wall below");
-        false
+        Ok(Some(false))
     }
 
-    fn wall_left(&self) -> bool {
+    fn wall_left(&self) -> FuncResult<bool> {
         info!("Wall left");
-        false
+        Ok(Some(false))
     }
 
-    fn wall_right(&self) -> bool {
+    fn wall_right(&self) -> FuncResult<bool> {
         info!("Wall right");
-        false
+        Ok(Some(false))
     }
 
-    fn colored(&self) -> bool {
+    fn colored(&self) -> FuncResult<bool> {
         info!("Colored");
-        false
+        Ok(Some(false))
     }
 
-    fn not_colored(&self) -> bool {
+    fn not_colored(&self) -> FuncResult<bool> {
         info!("Not colored");
-        true
+        Ok(Some(true))
     }
 }

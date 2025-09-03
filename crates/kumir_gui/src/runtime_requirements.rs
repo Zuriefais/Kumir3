@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use kumir_runtime::{RobotRequirements, RuntimeRequirementsTrait};
+use kumir_runtime::{FuncResult, RobotRequirements, RuntimeRequirementsTrait};
 use log::info;
 use std::time::Duration;
 use wasm_thread as thread;
@@ -12,18 +12,18 @@ macro_rules! call_method_in_enum {
         match $object {
             $class::$variant(executor) => {
                 let mut obj = executor.lock().unwrap();
-                obj.$method_name()
+                return obj.$method_name();
             }
-            _ => false,
+            _ => Err("Выбранный исполнитель отличается от загружаемого".to_string()),
         }
     };
     ($object:expr, $class:ident::$variant:ident, $method_name:ident, $($arg:expr),+) => {
         match $object {
             $class::$variant(executor) => {
                 let mut obj = executor.lock().unwrap();
-                obj.$method_name($($arg),+)
+                return obj.$method_name($($arg),+);
             }
-            _ => false,
+            _ => Err("Выбранный исполнитель отличается от загружаемого".to_string()),
         }
     };
 }
@@ -40,68 +40,72 @@ impl RuntimeRequirementsTrait for GuiRuntimeRequirements {
 }
 
 impl RobotRequirements for GuiRuntimeRequirements {
-    fn move_up(&self) {
-        call_method_in_enum!(self.mode.clone(), Modes::Robot, move_robot, 0, -1);
+    fn move_up(&self) -> FuncResult<()> {
+        call_method_in_enum!(self.mode.clone(), Modes::Robot, move_up)?;
         thread::sleep(self.sleep_duration);
+        Ok(None)
     }
 
-    fn move_down(&self) {
-        call_method_in_enum!(self.mode.clone(), Modes::Robot, move_robot, 0, 1);
+    fn move_down(&self) -> FuncResult<()> {
+        call_method_in_enum!(self.mode.clone(), Modes::Robot, move_down)?;
         thread::sleep(self.sleep_duration);
+        Ok(None)
     }
 
-    fn move_left(&self) {
-        call_method_in_enum!(self.mode.clone(), Modes::Robot, move_robot, -1, 0);
+    fn move_left(&self) -> FuncResult<()> {
+        call_method_in_enum!(self.mode.clone(), Modes::Robot, move_left)?;
         thread::sleep(self.sleep_duration);
+        Ok(None)
     }
 
-    fn move_right(&self) {
-        call_method_in_enum!(self.mode.clone(), Modes::Robot, move_robot, 1, 0);
+    fn move_right(&self) -> FuncResult<()> {
+        call_method_in_enum!(self.mode.clone(), Modes::Robot, move_right)?;
         thread::sleep(self.sleep_duration);
+        Ok(None)
     }
 
-    fn paint(&self) {
-        call_method_in_enum!(self.mode.clone(), Modes::Robot, paint);
+    fn paint(&self) -> FuncResult<()> {
         thread::sleep(self.sleep_duration);
+        call_method_in_enum!(self.mode.clone(), Modes::Robot, paint)
     }
 
-    fn free_right(&self) -> bool {
+    fn free_right(&self) -> FuncResult<bool> {
         call_method_in_enum!(self.mode.clone(), Modes::Robot, free_right)
     }
 
-    fn free_left(&self) -> bool {
+    fn free_left(&self) -> FuncResult<bool> {
         call_method_in_enum!(self.mode.clone(), Modes::Robot, free_left)
     }
 
-    fn free_above(&self) -> bool {
+    fn free_above(&self) -> FuncResult<bool> {
         call_method_in_enum!(self.mode.clone(), Modes::Robot, free_above)
     }
 
-    fn free_below(&self) -> bool {
+    fn free_below(&self) -> FuncResult<bool> {
         call_method_in_enum!(self.mode.clone(), Modes::Robot, free_below)
     }
 
-    fn wall_right(&self) -> bool {
+    fn wall_right(&self) -> FuncResult<bool> {
         call_method_in_enum!(self.mode.clone(), Modes::Robot, wall_right)
     }
 
-    fn wall_left(&self) -> bool {
+    fn wall_left(&self) -> FuncResult<bool> {
         call_method_in_enum!(self.mode.clone(), Modes::Robot, wall_left)
     }
 
-    fn wall_above(&self) -> bool {
+    fn wall_above(&self) -> FuncResult<bool> {
         call_method_in_enum!(self.mode.clone(), Modes::Robot, wall_above)
     }
 
-    fn wall_below(&self) -> bool {
+    fn wall_below(&self) -> FuncResult<bool> {
         call_method_in_enum!(self.mode.clone(), Modes::Robot, wall_below)
     }
 
-    fn colored(&self) -> bool {
+    fn colored(&self) -> FuncResult<bool> {
         call_method_in_enum!(self.mode.clone(), Modes::Robot, colored)
     }
 
-    fn not_colored(&self) -> bool {
+    fn not_colored(&self) -> FuncResult<bool> {
         call_method_in_enum!(self.mode.clone(), Modes::Robot, not_colored)
     }
 }

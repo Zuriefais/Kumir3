@@ -19,8 +19,11 @@ macro_rules! register {
                 params: IndexMap::new(),
                 return_type: None,
                 native_function: Rc::new(RefCell::new(move |_: &Rc<RefCell<Environment>>| {
-                    req.$method_name();
-                    Ok(None)
+                    let res = req.$method_name();
+                    match res {
+                        Ok(_) => Ok(None),
+                        Err(arg) => Err(arg),
+                    }
                 })),
             },
         );
@@ -34,7 +37,10 @@ macro_rules! register {
                 return_type: Some(TypeDefinition::$return_type),
                 native_function: Rc::new(RefCell::new(move |_: &Rc<RefCell<Environment>>| {
                     let res = req.$method_name();
-                    Ok(Some(Literal::$return_type(res)))
+                    match res {
+                        Ok(arg) => Ok(Some(Literal::$return_type(arg.unwrap()))),
+                        Err(arg) => Err(arg),
+                    }
                 })),
             },
         )

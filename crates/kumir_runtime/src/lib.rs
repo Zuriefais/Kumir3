@@ -1,6 +1,7 @@
 pub mod console_runtime_requirements;
 pub mod kumir_lang_runtime;
 pub mod python_runtime;
+use std::any::Any;
 use std::fmt;
 use std::sync::Arc;
 
@@ -59,27 +60,28 @@ impl Runtime for Target {
 }
 
 pub type RuntimeRequirements = Arc<dyn RuntimeRequirementsTrait + 'static>;
+pub type FuncResult<T> = Result<Option<T>, String>;
 
 pub trait RuntimeRequirementsTrait: RobotRequirements + Send + Sync {
     fn println(&self, message: &str);
 }
 
 pub trait RobotRequirements {
-    fn move_up(&self);
-    fn move_down(&self);
-    fn move_left(&self);
-    fn move_right(&self);
-    fn paint(&self);
-    fn free_right(&self) -> bool;
-    fn free_left(&self) -> bool;
-    fn free_above(&self) -> bool;
-    fn free_below(&self) -> bool;
-    fn wall_left(&self) -> bool;
-    fn wall_right(&self) -> bool;
-    fn wall_above(&self) -> bool;
-    fn wall_below(&self) -> bool;
-    fn colored(&self) -> bool;
-    fn not_colored(&self) -> bool;
+    fn move_up(&self) -> FuncResult<()>;
+    fn move_down(&self) -> FuncResult<()>;
+    fn move_left(&self) -> FuncResult<()>;
+    fn move_right(&self) -> FuncResult<()>;
+    fn paint(&self) -> FuncResult<()>;
+    fn free_right(&self) -> FuncResult<bool>;
+    fn free_left(&self) -> FuncResult<bool>;
+    fn free_above(&self) -> FuncResult<bool>;
+    fn free_below(&self) -> FuncResult<bool>;
+    fn wall_left(&self) -> FuncResult<bool>;
+    fn wall_right(&self) -> FuncResult<bool>;
+    fn wall_above(&self) -> FuncResult<bool>;
+    fn wall_below(&self) -> FuncResult<bool>;
+    fn colored(&self) -> FuncResult<bool>;
+    fn not_colored(&self) -> FuncResult<bool>;
 }
 
 pub trait Runtime {
