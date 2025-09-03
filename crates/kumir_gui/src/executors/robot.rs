@@ -471,7 +471,7 @@ impl Robot {
         if self.free_right().unwrap().unwrap() && self.move_robot(1, 0) {
             Ok(None)
         } else {
-            Err("Движение в стену".to_string())
+            Err("Robot is destroyed: there is a wall on the right".to_string())
         }
     }
 
@@ -479,7 +479,7 @@ impl Robot {
         if self.free_left().unwrap().unwrap() && self.move_robot(-1, 0) {
             Ok(None)
         } else {
-            Err("Движение в стену".to_string())
+            Err("Robot is destroyed: there is a wall on the left".to_string())
         }
     }
 
@@ -487,7 +487,7 @@ impl Robot {
         if self.free_above().unwrap().unwrap() && self.move_robot(0, -1) {
             Ok(None)
         } else {
-            Err("Движение в стену".to_string())
+            Err("Robot is destroyed: there is a wall above it".to_string())
         }
     }
 
@@ -495,7 +495,7 @@ impl Robot {
         if self.free_below().unwrap().unwrap() && self.move_robot(0, 1) {
             Ok(None)
         } else {
-            Err("Движение в стену".to_string())
+            Err("Robot is destroyed: there is a wall below it".to_string())
         }
     }
 

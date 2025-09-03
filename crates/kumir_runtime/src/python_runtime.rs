@@ -125,8 +125,16 @@ impl Runtime for PythonRuntime {
                 .compile(source, compiler::Mode::Exec, "<embedded>".to_owned())
                 .map_err(|err| format!("{:?}", vm.new_syntax_error(&err, Some(source))))?;
 
-            vm.run_code_obj(code_obj, scope)
-                .map_err(|err| parse_rustpython_error(err))?;
+            vm.run_code_obj(code_obj, scope).map_err(|err| {
+                let mut output = String::new();
+                match vm.write_exception_inner(&mut output, &err) {
+                    Ok(_) => return output,
+                    Err(args) => {
+                        error!("Failed to use ready parser: {:?}", args);
+                        return parse_rustpython_error(err);
+                    }
+                };
+            })?;
 
             Ok(())
         })
