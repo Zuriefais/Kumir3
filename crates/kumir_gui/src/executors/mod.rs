@@ -12,6 +12,7 @@ pub trait Executor: Debug + Send {
     fn get_scale(&self) -> f64;
     fn hovered(&mut self, pos: Pos2, pixels_per_point: f32);
     fn clicked(&mut self);
+    fn drag_started(&mut self);
     fn update_transform(&mut self, width: f64, height: f64);
     fn drag(&mut self, delta: Vec2);
     fn drag_stop(&mut self);
@@ -36,6 +37,7 @@ impl Executor for NoneSelected {
     }
     fn hovered(&mut self, _: Pos2, _: f32) {}
     fn clicked(&mut self) {}
+    fn drag_started(&mut self) {}
     fn update_transform(&mut self, _: f64, _: f64) {}
     fn drag(&mut self, _: Vec2) {}
     fn drag_stop(&mut self) {}

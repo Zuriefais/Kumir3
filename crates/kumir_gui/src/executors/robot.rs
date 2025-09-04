@@ -220,8 +220,8 @@ impl Robot {
 
         match self.hovered {
             Hovered::Robot { delta, dragging: _ } => {
-                center_x += delta.x;
-                center_y += delta.y;
+                center_x += delta.x / self.get_scale();
+                center_y += delta.y / self.get_scale();
             }
             _ => (),
         }
@@ -656,16 +656,16 @@ impl Executor for Robot {
             offset_y + (self.y + 1) as f64 * cell_size - cell_size / 3.0,
         );
 
+        let dragging_robot = match self.hovered {
+            Hovered::Robot { delta: _, dragging } => dragging,
+            _ => false,
+        };
+
         if 0f64 <= x_pos
             && x_pos < self.get_width() as f64
             && 0f64 <= y_pos
             && y_pos < self.get_height() as f64
         {
-            let dragging_robot = match self.hovered {
-                Hovered::Robot { delta: _, dragging } => dragging,
-                _ => false,
-            };
-
             if !dragging_robot {
                 self.hovered = {
                     let border_in_cell = self.cell_size * border_in_cell;
@@ -720,7 +720,7 @@ impl Executor for Robot {
                     }
                 }
             }
-        } else {
+        } else if !dragging_robot {
             self.hovered = Hovered::None;
         }
 
@@ -752,6 +752,18 @@ impl Executor for Robot {
         }
     }
 
+    fn drag_started(&mut self) {
+        match self.hovered {
+            Hovered::Robot { delta, dragging: _ } => {
+                self.hovered = Hovered::Robot {
+                    delta: delta,
+                    dragging: true,
+                };
+            }
+            _ => (),
+        }
+    }
+
     fn drag(&mut self, drag_delta: eguiVec2) {
         match self.hovered {
             Hovered::Robot { delta, dragging: _ } => {
@@ -770,8 +782,8 @@ impl Executor for Robot {
     fn drag_stop(&mut self) {
         match self.hovered {
             Hovered::Robot { delta, dragging: _ } => {
-                let cells_x = (delta.x / self.cell_size * self.get_scale()).round();
-                let cells_y = (delta.y / self.cell_size * self.get_scale()).round();
+                let cells_x = (delta.x / (self.cell_size * self.get_scale())).round();
+                let cells_y = (delta.y / (self.cell_size * self.get_scale())).round();
 
                 if (self.x as f64) < -cells_x {
                     self.x = 0;

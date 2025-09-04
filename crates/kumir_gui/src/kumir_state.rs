@@ -96,6 +96,17 @@ impl Executor for Modes {
         }
     }
 
+    fn drag_started(&mut self) {
+        match self {
+            Modes::None(executor) => executor.lock().unwrap().drag_started(),
+            Modes::Kuznechik(executor) => executor.lock().unwrap().drag_started(),
+            Modes::Vodolei(executor) => executor.lock().unwrap().drag_started(),
+            Modes::Cherepaha(executor) => executor.lock().unwrap().drag_started(),
+            Modes::Chertezhnik(executor) => executor.lock().unwrap().drag_started(),
+            Modes::Robot(executor) => executor.lock().unwrap().drag_started(),
+        }
+    }
+
     fn drag(&mut self, drag_delta: Vec2) {
         match self {
             Modes::None(executor) => executor.lock().unwrap().drag(drag_delta),
@@ -250,6 +261,10 @@ impl KumirState {
 
     pub fn click(&mut self) {
         self.selected_mode.clicked();
+    }
+
+    pub fn drag_start(&mut self) {
+        self.selected_mode.drag_started();
     }
 
     pub fn drag(&mut self, drag_delta: Vec2) {

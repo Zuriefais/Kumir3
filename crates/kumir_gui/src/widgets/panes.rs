@@ -231,6 +231,10 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                         });
                     }
 
+                    if response.is_pointer_button_down_on() {
+                        self.kumir_state.drag_start();
+                    }
+
                     if response.clicked() {
                         self.kumir_state.click();
                     }
