@@ -46,6 +46,7 @@ pub enum Hovered {
     },
     Robot {
         delta: velloVec2,
+        dragging: bool,
     },
     None,
 }
@@ -218,7 +219,7 @@ impl Robot {
         let mut center_y = self.cell_size / 2.0 + self.cell_size * (self.y as f64) + self.i;
 
         match self.hovered {
-            Hovered::Robot { delta } => {
+            Hovered::Robot { delta, dragging: _ } => {
                 center_x += delta.x;
                 center_y += delta.y;
             }
@@ -660,72 +661,62 @@ impl Executor for Robot {
             && 0f64 <= y_pos
             && y_pos < self.get_height() as f64
         {
-            match self.hovered {
-                Hovered::Robot { delta: _ } => (),
-                _ => {
-                    self.hovered = {
-                        let border_in_cell = self.cell_size * border_in_cell;
-                        if robot_min.x < x && x < robot_max.x && robot_min.y < y && y < robot_max.y
-                        {
-                            Hovered::Robot {
-                                delta: velloVec2::new(0.0, 0.0),
-                            }
-                        } else if pos_min.x < x && x < pos_max.x && pos_min.y < y && y < pos_max.y {
-                            Hovered::Cell {
-                                min: dp_min,
-                                max: dp_max,
-                                x: x_pos as usize,
-                                y: y_pos as usize,
-                            }
-                        } else if x < pos_min.x {
-                            Hovered::VerticalBorder {
-                                min: Point::new(dp_x_full - border_in_cell, dp_y_full),
-                                max: Point::new(
-                                    dp_x_full + border_in_cell,
-                                    dp_y_full + self.cell_size,
-                                ),
-                                x: x_pos as usize,
-                                y: y_pos as usize,
-                            }
-                        } else if y < pos_min.y {
-                            Hovered::HorizontalBorder {
-                                min: Point::new(dp_x_full, dp_y_full - border_in_cell),
-                                max: Point::new(
-                                    dp_x_full + self.cell_size,
-                                    dp_y_full + border_in_cell,
-                                ),
-                                x: x_pos as usize,
-                                y: y_pos as usize,
-                            }
-                        } else if x > pos_max.x {
-                            Hovered::VerticalBorder {
-                                min: Point::new(
-                                    dp_x_full + self.cell_size - border_in_cell,
-                                    dp_y_full,
-                                ),
-                                max: Point::new(
-                                    dp_x_full + self.cell_size + border_in_cell,
-                                    dp_y_full + self.cell_size,
-                                ),
-                                x: x_pos as usize + 1,
-                                y: y_pos as usize,
-                            }
-                        } else if y > pos_max.y {
-                            Hovered::HorizontalBorder {
-                                min: Point::new(
-                                    dp_x_full,
-                                    dp_y_full + self.cell_size - border_in_cell,
-                                ),
-                                max: Point::new(
-                                    dp_x_full + self.cell_size,
-                                    dp_y_full + self.cell_size + border_in_cell,
-                                ),
-                                x: x_pos as usize,
-                                y: y_pos as usize + 1,
-                            }
-                        } else {
-                            Hovered::None
+            let dragging_robot = match self.hovered {
+                Hovered::Robot { delta: _, dragging } => dragging,
+                _ => false,
+            };
+
+            if !dragging_robot {
+                self.hovered = {
+                    let border_in_cell = self.cell_size * border_in_cell;
+                    if robot_min.x < x && x < robot_max.x && robot_min.y < y && y < robot_max.y {
+                        Hovered::Robot {
+                            delta: velloVec2::new(0.0, 0.0),
+                            dragging: false,
                         }
+                    } else if pos_min.x < x && x < pos_max.x && pos_min.y < y && y < pos_max.y {
+                        Hovered::Cell {
+                            min: dp_min,
+                            max: dp_max,
+                            x: x_pos as usize,
+                            y: y_pos as usize,
+                        }
+                    } else if x < pos_min.x {
+                        Hovered::VerticalBorder {
+                            min: Point::new(dp_x_full - border_in_cell, dp_y_full),
+                            max: Point::new(dp_x_full + border_in_cell, dp_y_full + self.cell_size),
+                            x: x_pos as usize,
+                            y: y_pos as usize,
+                        }
+                    } else if y < pos_min.y {
+                        Hovered::HorizontalBorder {
+                            min: Point::new(dp_x_full, dp_y_full - border_in_cell),
+                            max: Point::new(dp_x_full + self.cell_size, dp_y_full + border_in_cell),
+                            x: x_pos as usize,
+                            y: y_pos as usize,
+                        }
+                    } else if x > pos_max.x {
+                        Hovered::VerticalBorder {
+                            min: Point::new(dp_x_full + self.cell_size - border_in_cell, dp_y_full),
+                            max: Point::new(
+                                dp_x_full + self.cell_size + border_in_cell,
+                                dp_y_full + self.cell_size,
+                            ),
+                            x: x_pos as usize + 1,
+                            y: y_pos as usize,
+                        }
+                    } else if y > pos_max.y {
+                        Hovered::HorizontalBorder {
+                            min: Point::new(dp_x_full, dp_y_full + self.cell_size - border_in_cell),
+                            max: Point::new(
+                                dp_x_full + self.cell_size,
+                                dp_y_full + self.cell_size + border_in_cell,
+                            ),
+                            x: x_pos as usize,
+                            y: y_pos as usize + 1,
+                        }
+                    } else {
+                        Hovered::None
                     }
                 }
             }
@@ -763,12 +754,13 @@ impl Executor for Robot {
 
     fn drag(&mut self, drag_delta: eguiVec2) {
         match self.hovered {
-            Hovered::Robot { delta } => {
+            Hovered::Robot { delta, dragging: _ } => {
                 self.hovered = Hovered::Robot {
                     delta: velloVec2::new(
                         delta.x + drag_delta.x as f64,
                         delta.y + drag_delta.y as f64,
                     ),
+                    dragging: true,
                 };
             }
             _ => (),
@@ -777,7 +769,7 @@ impl Executor for Robot {
 
     fn drag_stop(&mut self) {
         match self.hovered {
-            Hovered::Robot { delta } => {
+            Hovered::Robot { delta, dragging: _ } => {
                 let cells_x = (delta.x / self.cell_size * self.get_scale()).round();
                 let cells_y = (delta.y / self.cell_size * self.get_scale()).round();
 
