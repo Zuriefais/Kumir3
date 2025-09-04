@@ -1,12 +1,10 @@
-use egui::Pos2;
+use egui::{Pos2, Vec2};
 use vello::{Scene, peniko::Color};
 pub mod robot;
 
-use crate::kumir_state::Modes;
-use std::any::Any;
 use std::fmt::Debug;
 
-pub trait Executor: Any + Debug + Send {
+pub trait Executor: Debug + Send {
     fn clear_field(&self, scene: &mut Scene);
     fn draw_field(&mut self, scene: &mut Scene);
     fn base_color(&self) -> Color;
@@ -15,6 +13,8 @@ pub trait Executor: Any + Debug + Send {
     fn hovered(&mut self, pos: Pos2, pixels_per_point: f32);
     fn clicked(&mut self);
     fn update_transform(&mut self, width: f64, height: f64);
+    fn drag(&mut self, delta: Vec2);
+    fn drag_stop(&mut self);
 }
 
 #[derive(Debug)]
@@ -25,18 +25,20 @@ impl NoneSelected {
     }
 }
 impl Executor for NoneSelected {
-    fn clear_field(&self, scene: &mut Scene) {}
-    fn draw_field(&mut self, scene: &mut Scene) {}
+    fn clear_field(&self, _: &mut Scene) {}
+    fn draw_field(&mut self, _: &mut Scene) {}
     fn base_color(&self) -> Color {
         Color::BLACK
     }
-    fn change_scale(&mut self, delta_scale: f64) {}
+    fn change_scale(&mut self, _: f64) {}
     fn get_scale(&self) -> f64 {
-        0.0
+        1.0
     }
-    fn hovered(&mut self, pos: Pos2, pixels_per_point: f32) {}
+    fn hovered(&mut self, _: Pos2, _: f32) {}
     fn clicked(&mut self) {}
-    fn update_transform(&mut self, width: f64, height: f64) {}
+    fn update_transform(&mut self, _: f64, _: f64) {}
+    fn drag(&mut self, _: Vec2) {}
+    fn drag_stop(&mut self) {}
 }
 // pub fn add_shapes_to_scene(scene: &mut Scene, width: u32, height: u32) {
 //     let rob = Robot::new(9, 9, 100.0);

@@ -1,16 +1,11 @@
 use std::sync::{Arc, Mutex};
 
-use crate::kumir_state::{KumirState, Modes, ModesStored};
-use crate::widgets::panes::{
-    IDEWindowOptions, Pane, TreeBehavior, VelloWindowOptions, create_tree,
-};
+use crate::kumir_state::KumirState;
+use crate::widgets::panes::{Pane, TreeBehavior, VelloWindowOptions, create_tree};
 use crate::widgets::usage_diagnostics::UsageDiagnostics;
-use egui::Vec2;
-use egui::color_picker::Alpha;
-use egui::{Context, TextureId, load::SizedTexture};
-use egui::{Response, Sense, Ui, Widget};
+use egui::Context;
+use egui::Widget;
 
-use log::info;
 use vello::peniko::color::{AlphaColor, Srgb};
 
 pub struct KumirGui {
@@ -83,9 +78,7 @@ impl KumirGui {
         //     });
 
         egui::CentralPanel::default().show(&self.egui_context, |ui| {
-            let mut behavior = TreeBehavior {
-                kumir_state: &mut self.kumir_state,
-            };
+            let mut behavior = TreeBehavior::new(&mut self.kumir_state);
             self.tree.ui(&mut behavior, ui);
         });
     }

@@ -1,11 +1,9 @@
 use crate::executors::Executor;
-use egui::{Pos2, Widget};
+use egui::{Pos2, Vec2 as eguiVec2};
 use kumir_runtime::FuncResult;
 use log::info;
-use std::any::Any;
-use std::sync::{Arc, Mutex};
 use vello::Scene;
-use vello::kurbo::{Affine, Line, Point, Rect, Stroke};
+use vello::kurbo::{Affine, Line, Point, Rect, Stroke, Vec2 as velloVec2};
 use vello::peniko::{Color, color::palette::css};
 
 #[derive(PartialEq, Copy, Clone, Debug)]
@@ -45,6 +43,9 @@ pub enum Hovered {
         max: Point,
         x: usize,
         y: usize,
+    },
+    Robot {
+        delta: velloVec2,
     },
     None,
 }
@@ -213,8 +214,16 @@ impl Robot {
     pub fn draw_robot(&self, scene: &mut Scene) {
         // #[cfg(unix)]
         // tracy_full::zone!("Vello Draw Robot", tracy_full::color::Color::CYAN, true);
-        let center_x = self.cell_size / 2.0 + self.cell_size * (self.x as f64) + self.o;
-        let center_y = self.cell_size / 2.0 + self.cell_size * (self.y as f64) + self.i;
+        let mut center_x = self.cell_size / 2.0 + self.cell_size * (self.x as f64) + self.o;
+        let mut center_y = self.cell_size / 2.0 + self.cell_size * (self.y as f64) + self.i;
+
+        match self.hovered {
+            Hovered::Robot { delta } => {
+                center_x += delta.x;
+                center_y += delta.y;
+            }
+            _ => (),
+        }
 
         let robot_shape = Rect::from_center_size(
             (center_x, center_y),
@@ -236,7 +245,7 @@ impl Robot {
         scene.stroke(
             &Stroke::new(2.0),
             transform,
-            Color::from_rgb8(0, 0, 0),
+            self.field_parameters.robot_border_color,
             None,
             &robot_shape,
         );
@@ -269,6 +278,7 @@ impl Robot {
                 None,
                 &Rect::from_points(min, max),
             ),
+            _ => (),
         }
     }
 
@@ -623,6 +633,7 @@ impl Executor for Robot {
             y_full + (1.0 - border_in_cell) * cell_size,
         );
 
+        // dp - drawn position
         let dp_x_full = self.o + x_pos * self.cell_size;
         let dp_y_full = self.i + y_pos * self.cell_size;
         let dp_min = Point::new(
@@ -634,61 +645,95 @@ impl Executor for Robot {
             dp_y_full + self.cell_size * (1.0 - border_in_cell),
         );
 
+        // robot hover checking
+        let robot_min = Point::new(
+            offset_x + self.x as f64 * cell_size + cell_size / 3.0,
+            offset_y + self.y as f64 * cell_size + cell_size / 3.0,
+        );
+        let robot_max = Point::new(
+            offset_x + (self.x + 1) as f64 * cell_size - cell_size / 3.0,
+            offset_y + (self.y + 1) as f64 * cell_size - cell_size / 3.0,
+        );
+
         if 0f64 <= x_pos
             && x_pos < self.get_width() as f64
             && 0f64 <= y_pos
             && y_pos < self.get_height() as f64
         {
-            self.hovered = {
-                let border_in_cell = self.cell_size * border_in_cell;
-                if pos_min.x < x && x < pos_max.x && pos_min.y < y && y < pos_max.y {
-                    Hovered::Cell {
-                        min: dp_min,
-                        max: dp_max,
-                        x: x_pos as usize,
-                        y: y_pos as usize,
+            match self.hovered {
+                Hovered::Robot { delta: _ } => (),
+                _ => {
+                    self.hovered = {
+                        let border_in_cell = self.cell_size * border_in_cell;
+                        if robot_min.x < x && x < robot_max.x && robot_min.y < y && y < robot_max.y
+                        {
+                            Hovered::Robot {
+                                delta: velloVec2::new(0.0, 0.0),
+                            }
+                        } else if pos_min.x < x && x < pos_max.x && pos_min.y < y && y < pos_max.y {
+                            Hovered::Cell {
+                                min: dp_min,
+                                max: dp_max,
+                                x: x_pos as usize,
+                                y: y_pos as usize,
+                            }
+                        } else if x < pos_min.x {
+                            Hovered::VerticalBorder {
+                                min: Point::new(dp_x_full - border_in_cell, dp_y_full),
+                                max: Point::new(
+                                    dp_x_full + border_in_cell,
+                                    dp_y_full + self.cell_size,
+                                ),
+                                x: x_pos as usize,
+                                y: y_pos as usize,
+                            }
+                        } else if y < pos_min.y {
+                            Hovered::HorizontalBorder {
+                                min: Point::new(dp_x_full, dp_y_full - border_in_cell),
+                                max: Point::new(
+                                    dp_x_full + self.cell_size,
+                                    dp_y_full + border_in_cell,
+                                ),
+                                x: x_pos as usize,
+                                y: y_pos as usize,
+                            }
+                        } else if x > pos_max.x {
+                            Hovered::VerticalBorder {
+                                min: Point::new(
+                                    dp_x_full + self.cell_size - border_in_cell,
+                                    dp_y_full,
+                                ),
+                                max: Point::new(
+                                    dp_x_full + self.cell_size + border_in_cell,
+                                    dp_y_full + self.cell_size,
+                                ),
+                                x: x_pos as usize + 1,
+                                y: y_pos as usize,
+                            }
+                        } else if y > pos_max.y {
+                            Hovered::HorizontalBorder {
+                                min: Point::new(
+                                    dp_x_full,
+                                    dp_y_full + self.cell_size - border_in_cell,
+                                ),
+                                max: Point::new(
+                                    dp_x_full + self.cell_size,
+                                    dp_y_full + self.cell_size + border_in_cell,
+                                ),
+                                x: x_pos as usize,
+                                y: y_pos as usize + 1,
+                            }
+                        } else {
+                            Hovered::None
+                        }
                     }
-                } else if x < pos_min.x {
-                    Hovered::VerticalBorder {
-                        min: Point::new(dp_x_full - border_in_cell, dp_y_full),
-                        max: Point::new(dp_x_full + border_in_cell, dp_y_full + self.cell_size),
-                        x: x_pos as usize,
-                        y: y_pos as usize,
-                    }
-                } else if y < pos_min.y {
-                    Hovered::HorizontalBorder {
-                        min: Point::new(dp_x_full, dp_y_full - border_in_cell),
-                        max: Point::new(dp_x_full + self.cell_size, dp_y_full + border_in_cell),
-                        x: x_pos as usize,
-                        y: y_pos as usize,
-                    }
-                } else if x > pos_max.x {
-                    Hovered::VerticalBorder {
-                        min: Point::new(dp_x_full + self.cell_size - border_in_cell, dp_y_full),
-                        max: Point::new(
-                            dp_x_full + self.cell_size + border_in_cell,
-                            dp_y_full + self.cell_size,
-                        ),
-                        x: x_pos as usize + 1,
-                        y: y_pos as usize,
-                    }
-                } else if y > pos_max.y {
-                    Hovered::HorizontalBorder {
-                        min: Point::new(dp_x_full, dp_y_full + self.cell_size - border_in_cell),
-                        max: Point::new(
-                            dp_x_full + self.cell_size,
-                            dp_y_full + self.cell_size + border_in_cell,
-                        ),
-                        x: x_pos as usize,
-                        y: y_pos as usize + 1,
-                    }
-                } else {
-                    Hovered::None
                 }
-            };
+            }
         } else {
             self.hovered = Hovered::None;
         }
+
+        info!("Hovered: {:?}", self.hovered)
     }
 
     fn clicked(&mut self) {
@@ -712,7 +757,57 @@ impl Executor for Robot {
                 x,
                 y,
             } => self.vertical_borders[x][y] = !self.vertical_borders[x][y],
-            Hovered::None => (),
+            _ => (),
+        }
+    }
+
+    fn drag(&mut self, drag_delta: eguiVec2) {
+        match self.hovered {
+            Hovered::Robot { delta } => {
+                self.hovered = Hovered::Robot {
+                    delta: velloVec2::new(
+                        delta.x + drag_delta.x as f64,
+                        delta.y + drag_delta.y as f64,
+                    ),
+                };
+            }
+            _ => (),
+        }
+    }
+
+    fn drag_stop(&mut self) {
+        match self.hovered {
+            Hovered::Robot { delta } => {
+                let cells_x = (delta.x / self.cell_size * self.get_scale()).round();
+                let cells_y = (delta.y / self.cell_size * self.get_scale()).round();
+
+                if (self.x as f64) < -cells_x {
+                    self.x = 0;
+                } else if self.x as f64 + cells_x >= self.get_width() as f64 {
+                    self.x = self.get_width() - 1;
+                } else {
+                    if cells_x > 0f64 {
+                        self.x += cells_x as usize;
+                    } else {
+                        self.x -= -cells_x as usize;
+                    }
+                }
+
+                if (self.y as f64) < -cells_y {
+                    self.y = 0;
+                } else if self.y as f64 + cells_y >= self.get_height() as f64 {
+                    self.x = self.get_height() - 1;
+                } else {
+                    if cells_y > 0f64 {
+                        self.y += cells_y as usize;
+                    } else {
+                        self.y -= -cells_y as usize;
+                    }
+                }
+
+                self.hovered = Hovered::None;
+            }
+            _ => (),
         }
     }
 

@@ -243,12 +243,18 @@ impl Parser {
         self.advance(); // Skip the count
         self.expect(Token::Keyword(Keyword::Loop(lexer::Loop::Times)))?;
         let mut statements = Vec::new();
-        while !self.check(&Token::Keyword(Keyword::Loop(lexer::Loop::End))) {
-            statements.push(self.parse_stmt()?); // Parse statements, not expressions
+        let mut condition = None;
+        while *self.current_token() != Token::Keyword(Keyword::Loop(lexer::Loop::End)) {
+            if *self.current_token() != Token::Keyword(Keyword::Loop(lexer::Loop::EndIf)) {
+                self.advance();
+                condition = Some(self.parse_expr()?);
+            } else {
+                statements.push(self.parse_stmt()?);
+            }
         }
         self.advance(); // Skip Loop::End
         Ok(Stmt::RepeatLoop(RepeatLoop {
-            condition: None,
+            condition,
             count,
             body: Box::new(AstNode::Program(statements)),
         }))

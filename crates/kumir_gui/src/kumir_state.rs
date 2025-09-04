@@ -1,9 +1,9 @@
 use crate::executors::robot::Robot;
 use crate::executors::{Executor, NoneSelected};
-use egui::Pos2;
+use egui::{Pos2, Vec2};
 
 use std::fmt;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex};
 
 use vello::Scene;
 use vello::peniko::Color;
@@ -96,6 +96,28 @@ impl Executor for Modes {
         }
     }
 
+    fn drag(&mut self, drag_delta: Vec2) {
+        match self {
+            Modes::None(executor) => executor.lock().unwrap().drag(drag_delta),
+            Modes::Kuznechik(executor) => executor.lock().unwrap().drag(drag_delta),
+            Modes::Vodolei(executor) => executor.lock().unwrap().drag(drag_delta),
+            Modes::Cherepaha(executor) => executor.lock().unwrap().drag(drag_delta),
+            Modes::Chertezhnik(executor) => executor.lock().unwrap().drag(drag_delta),
+            Modes::Robot(executor) => executor.lock().unwrap().drag(drag_delta),
+        }
+    }
+
+    fn drag_stop(&mut self) {
+        match self {
+            Modes::None(executor) => executor.lock().unwrap().drag_stop(),
+            Modes::Kuznechik(executor) => executor.lock().unwrap().drag_stop(),
+            Modes::Vodolei(executor) => executor.lock().unwrap().drag_stop(),
+            Modes::Cherepaha(executor) => executor.lock().unwrap().drag_stop(),
+            Modes::Chertezhnik(executor) => executor.lock().unwrap().drag_stop(),
+            Modes::Robot(executor) => executor.lock().unwrap().drag_stop(),
+        }
+    }
+
     fn update_transform(&mut self, width: f64, height: f64) {
         match self {
             Modes::None(executor) => executor.lock().unwrap().update_transform(width, height),
@@ -129,10 +151,10 @@ impl fmt::Display for Modes {
     }
 }
 
-pub enum VisualMode {
-    Dark,
-    Light,
-}
+// pub enum VisualMode {
+//     Dark,
+//     Light,
+// }
 
 pub struct ModesStored {
     pub none: Modes,
@@ -145,11 +167,11 @@ pub struct ModesStored {
 
 pub struct KumirState {
     pub scene: Arc<Mutex<Scene>>,
-    pub width: f64,
-    pub height: f64,
+    // pub width: f64,
+    // pub height: f64,
     pub selected_mode: Modes,
     pub modes: ModesStored,
-    pub visual_mode: VisualMode,
+    // pub visual_mode: VisualMode,
     pub min_point: Pos2,
 }
 
@@ -169,8 +191,8 @@ impl KumirState {
         let cherepaha = Modes::Cherepaha(Arc::new(Mutex::new(NoneSelected::new())));
         KumirState {
             scene: scene,
-            width: width,
-            height: height,
+            // width: width,
+            // height: height,
             selected_mode: none.clone(),
             modes: ModesStored {
                 none: none,
@@ -180,7 +202,7 @@ impl KumirState {
                 chertezhnik: chertezhnik,
                 cherepaha: cherepaha,
             },
-            visual_mode: VisualMode::Dark,
+            // visual_mode: VisualMode::Dark,
             min_point: Pos2::new(10.0, 85.0),
         }
     }
@@ -209,9 +231,9 @@ impl KumirState {
         self.selected_mode.change_scale(scale_delta);
     }
 
-    pub fn get_scale(&self) -> f64 {
-        self.selected_mode.get_scale()
-    }
+    // pub fn get_scale(&self) -> f64 {
+    //     self.selected_mode.get_scale()
+    // }
 
     pub fn base_color(&self) -> Color {
         self.selected_mode.base_color()
@@ -228,5 +250,13 @@ impl KumirState {
 
     pub fn click(&mut self) {
         self.selected_mode.clicked();
+    }
+
+    pub fn drag(&mut self, drag_delta: Vec2) {
+        self.selected_mode.drag(drag_delta);
+    }
+
+    pub fn drag_stop(&mut self) {
+        self.selected_mode.drag_stop();
     }
 }

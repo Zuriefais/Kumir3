@@ -1,4 +1,4 @@
-
+#[allow(dead_code)]
 struct GruvboxColors {
     bg: egui::Color32,
     fg: egui::Color32,

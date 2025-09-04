@@ -1,4 +1,4 @@
-use egui::{Context, Ui, Widget};
+use egui::{Ui, Widget};
 
 use web_time::Instant;
 

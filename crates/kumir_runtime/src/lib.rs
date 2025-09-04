@@ -1,12 +1,8 @@
 pub mod console_runtime_requirements;
 pub mod kumir_lang_runtime;
 pub mod python_runtime;
-use std::any::Any;
 use std::fmt;
 use std::sync::Arc;
-
-use log::info;
-use rustpython_vm::PyRef;
 
 use crate::kumir_lang_runtime::KumirLangRuntime;
 use crate::python_runtime::PythonRuntime;

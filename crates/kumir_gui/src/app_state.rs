@@ -7,7 +7,6 @@ use egui_wgpu::wgpu::SurfaceError;
 use egui_wgpu::{ScreenDescriptor, wgpu};
 use log::info;
 use std::sync::{Arc, Mutex};
-use vello::peniko::color::palette;
 use vello::wgpu::TextureFormat;
 use vello::{AaConfig, Renderer, RendererOptions, Scene};
 #[cfg(target_arch = "wasm32")]

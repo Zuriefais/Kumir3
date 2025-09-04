@@ -1,6 +1,6 @@
 use crate::{Lang, Runtime, RuntimeRequirements};
 use log::{error, info};
-use rustpython::vm::{PyObject, PyResult, TryFromBorrowedObject, VirtualMachine};
+use rustpython::vm::{PyResult, VirtualMachine};
 use rustpython_vm::{
     AsObject,
     builtins::{PyBaseException, PyStr},
@@ -34,28 +34,30 @@ fn parse_rustpython_error(err: PyRef<PyBaseException>) -> String {
     format!("{error_text}\n{traceback}")
 }
 
+macro_rules! new_function {
+    ($vm:expr, $requirements:expr, $name:ident) => {
+        $vm.new_function(
+            stringify!($name),
+            move |vm: &VirtualMachine| -> PyResult<PyObjectRef> {
+                match $requirements.$name() {
+                    Err(arg) => Err(vm.new_runtime_error(arg)),
+                    Ok(arg) => match arg {
+                        Some(result) => Ok(vm.new_pyobj(result)),
+                        None => Ok(vm.new_pyobj(vm.ctx.none())),
+                    },
+                }
+            },
+        )
+    };
+}
+
 macro_rules! register_module {
     ($vm:expr, $scope:expr, $requirements:expr, $module_name:ident, $($name:ident),+) => {
         let module_dict = $vm.ctx.new_dict();
 
         $(
             let req = $requirements.clone();
-            let func = $vm.new_function(stringify!($name), move |vm: &VirtualMachine| -> PyResult<PyObjectRef> {
-                match req.$name() {
-                    Err(arg) => {
-                        Err(vm.new_runtime_error(arg))
-                    },
-                    Ok(arg) => {
-                        match arg {
-                            Some(result) => {
-                                Ok(vm.new_pyobj(result))
-                            },
-                            None => Ok(vm.new_pyobj(vm.ctx.none())),
-                        }
-                    }
-
-                }
-            });
+            let func = new_function!($vm, req, $name);
             module_dict.set_item(stringify!($name), func.into(), &$vm).unwrap();
         )+
 
@@ -75,6 +77,25 @@ macro_rules! register_module {
                 )+
 
                 error!("Error occured: {:?}", err);
+            }
+        }
+    };
+}
+
+macro_rules! register_function {
+    ($vm:expr, $scope:expr, $requirements:expr, $name:ident) => {
+        let func = new_function!($vm, $requirements.clone(), $name);
+        match $scope
+            .globals
+            .set_item(stringify!($name), func.into(), &$vm)
+        {
+            Ok(_) => {}
+            Err(err) => {
+                error!(
+                    "Failed to register function {}: {:?}",
+                    stringify!($name),
+                    err
+                );
             }
         }
     };

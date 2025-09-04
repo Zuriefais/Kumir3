@@ -1,4 +1,4 @@
-use crate::executors::robot::{ColumnsMode, Robot, RobotEditingState, RowsMode};
+use crate::executors::robot::{ColumnsMode, RowsMode};
 use crate::kumir_state::{KumirState, Modes};
 use egui::{Response, Ui, Widget};
 

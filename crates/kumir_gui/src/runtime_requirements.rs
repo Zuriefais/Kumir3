@@ -1,5 +1,3 @@
-use std::sync::Mutex;
-
 use kumir_runtime::{FuncResult, RobotRequirements, RuntimeRequirementsTrait};
 use log::info;
 use std::time::Duration;
@@ -12,7 +10,7 @@ macro_rules! call_method_in_enum {
         match $object {
             $class::$variant(executor) => {
                 let mut obj = executor.lock().unwrap();
-                return obj.$method_name();
+                return (&mut obj).$method_name();
             }
             _ => Err("Выбранный исполнитель отличается от загружаемого".to_string()),
         }

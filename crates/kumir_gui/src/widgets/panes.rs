@@ -1,12 +1,11 @@
 use crate::kumir_state::{KumirState, Modes};
 use crate::runtime_requirements::GuiRuntimeRequirements;
 use crate::widgets::robot_gui::RobotWidget;
-use egui::was_tooltip_open_last_frame;
-use egui::{Align2, Pos2, Sense, TextureId, Vec2, load::SizedTexture};
-use egui_extras::syntax_highlighting::highlight;
+use egui::Ui;
+use egui::{Align2, Sense, TextureId, load::SizedTexture};
+use egui_extras::syntax_highlighting::{CodeTheme, highlight};
 use kumir_runtime::{Lang, Runtime};
 use log::{error, info};
-use std::fmt;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use wasm_thread as thread;
@@ -27,6 +26,7 @@ pub struct IDEWindowOptions {
 
 pub enum Pane {
     Unknown(usize),
+    #[allow(dead_code)]
     Terminal,
     IDE(IDEWindowOptions),
     Vello(Arc<Mutex<VelloWindowOptions>>),
@@ -34,6 +34,16 @@ pub enum Pane {
 
 pub struct TreeBehavior<'a> {
     pub kumir_state: &'a mut KumirState,
+    ide_theme: CodeTheme,
+}
+
+impl<'a> TreeBehavior<'a> {
+    pub fn new(kumir_state: &'a mut KumirState) -> Self {
+        Self {
+            kumir_state: kumir_state,
+            ide_theme: CodeTheme::default(),
+        }
+    }
 }
 
 impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
@@ -96,22 +106,17 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
 
                 // });
 
-                egui::ComboBox::from_label("<- language")
-                    .selected_text(format!("{}", options.lang))
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut options.lang, Lang::Python, "Python");
-                        ui.selectable_value(&mut options.lang, Lang::Kumir, "Кумир");
-                    });
+                ui.horizontal(|ui: &mut Ui| {
+                    ui.label("Язык программирования: ");
+                    egui::ComboBox::from_id_salt("language")
+                        .selected_text(format!("{}", options.lang))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut options.lang, Lang::Python, "Python");
+                            ui.selectable_value(&mut options.lang, Lang::Kumir, "Кумир");
+                        });
+                });
 
                 // let mut theme = CodeTheme::from_memory(ui.ctx(), ui.style());
-                let mut theme =
-                    egui_extras::syntax_highlighting::CodeTheme::from_memory(ui.ctx(), ui.style());
-                ui.collapsing("Theme", |ui| {
-                    ui.group(|ui| {
-                        theme.ui(ui);
-                        theme.clone().store_in_memory(ui.ctx());
-                    });
-                });
 
                 ui.horizontal(|ui| {
                     ui.label("Задержка действий исполнителя: ");
@@ -151,7 +156,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                 let mut layouter = |ui: &egui::Ui, buf: &str, wrap_width: f32| {
                     let lang = format!("{}", options.lang);
                     let mut layout_job =
-                        highlight(ui.ctx(), ui.style(), &theme, buf, lang.as_str());
+                        highlight(ui.ctx(), ui.style(), &self.ide_theme, buf, lang.as_str());
                     layout_job.wrap.max_width = wrap_width;
                     ui.fonts(|f| f.layout_job(layout_job))
                 };
@@ -174,12 +179,26 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                     .constrain_to(ui.available_rect_before_wrap())
                     .anchor(Align2::RIGHT_TOP, [-10.0, 10.0])
                     .show(&ui.ctx().clone(), |ui| {
-                        match self.kumir_state.selected_mode {
-                            Modes::Robot(_) => ui.add(RobotWidget {
-                                kumir_state: &mut self.kumir_state,
-                            }),
-                            _ => ui.label("Режим не выбран"),
-                        }
+                        ui.scope(|ui| {
+                            match self.kumir_state.selected_mode {
+                                Modes::Robot(_) => ui.add(RobotWidget {
+                                    kumir_state: &mut self.kumir_state,
+                                }),
+                                _ => ui.label("Режим не выбран"),
+                            };
+
+                            self.ide_theme =
+                                egui_extras::syntax_highlighting::CodeTheme::from_memory(
+                                    ui.ctx(),
+                                    ui.style(),
+                                );
+                            ui.collapsing("Theme", |ui| {
+                                ui.group(|ui| {
+                                    self.ide_theme.ui(ui);
+                                    self.ide_theme.clone().store_in_memory(ui.ctx());
+                                });
+                            });
+                        })
                     });
 
                 let available_size = ui.available_size();
@@ -198,7 +217,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                             id: vello_options.texture,
                             size: egui::Vec2::new(available_size.x, available_size.y),
                         })
-                        .interact(Sense::click());
+                        .interact(Sense::click_and_drag());
 
                     self.kumir_state.update_min_point(response.rect.min);
 
@@ -214,6 +233,14 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
 
                     if response.clicked() {
                         self.kumir_state.click();
+                    }
+
+                    if response.dragged() {
+                        self.kumir_state.drag(response.drag_delta());
+                    }
+
+                    if response.drag_stopped() {
+                        self.kumir_state.drag_stop();
                     }
                 }
             }
