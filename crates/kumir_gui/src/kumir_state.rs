@@ -107,14 +107,20 @@ impl Executor for Modes {
         }
     }
 
-    fn drag(&mut self, drag_delta: Vec2) {
+    fn drag(&mut self, drag_delta: Vec2, pixels_per_point: f32) {
         match self {
-            Modes::None(executor) => executor.lock().unwrap().drag(drag_delta),
-            Modes::Kuznechik(executor) => executor.lock().unwrap().drag(drag_delta),
-            Modes::Vodolei(executor) => executor.lock().unwrap().drag(drag_delta),
-            Modes::Cherepaha(executor) => executor.lock().unwrap().drag(drag_delta),
-            Modes::Chertezhnik(executor) => executor.lock().unwrap().drag(drag_delta),
-            Modes::Robot(executor) => executor.lock().unwrap().drag(drag_delta),
+            Modes::None(executor) => executor.lock().unwrap().drag(drag_delta, pixels_per_point),
+            Modes::Kuznechik(executor) => {
+                executor.lock().unwrap().drag(drag_delta, pixels_per_point)
+            }
+            Modes::Vodolei(executor) => executor.lock().unwrap().drag(drag_delta, pixels_per_point),
+            Modes::Cherepaha(executor) => {
+                executor.lock().unwrap().drag(drag_delta, pixels_per_point)
+            }
+            Modes::Chertezhnik(executor) => {
+                executor.lock().unwrap().drag(drag_delta, pixels_per_point)
+            }
+            Modes::Robot(executor) => executor.lock().unwrap().drag(drag_delta, pixels_per_point),
         }
     }
 
@@ -267,8 +273,8 @@ impl KumirState {
         self.selected_mode.drag_started();
     }
 
-    pub fn drag(&mut self, drag_delta: Vec2) {
-        self.selected_mode.drag(drag_delta);
+    pub fn drag(&mut self, drag_delta: Vec2, pixels_per_point: f32) {
+        self.selected_mode.drag(drag_delta, pixels_per_point);
     }
 
     pub fn drag_stop(&mut self) {

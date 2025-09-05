@@ -240,7 +240,8 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                     }
 
                     if response.dragged() {
-                        self.kumir_state.drag(response.drag_delta());
+                        self.kumir_state
+                            .drag(response.drag_delta(), ui.pixels_per_point());
                     }
 
                     if response.drag_stopped() {

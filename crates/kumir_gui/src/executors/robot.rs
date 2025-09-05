@@ -764,13 +764,13 @@ impl Executor for Robot {
         }
     }
 
-    fn drag(&mut self, drag_delta: eguiVec2) {
+    fn drag(&mut self, drag_delta: eguiVec2, pixels_per_point: f32) {
         match self.hovered {
             Hovered::Robot { delta, dragging: _ } => {
                 self.hovered = Hovered::Robot {
                     delta: velloVec2::new(
-                        delta.x + drag_delta.x as f64,
-                        delta.y + drag_delta.y as f64,
+                        delta.x + (drag_delta.x * pixels_per_point) as f64,
+                        delta.y + (drag_delta.y * pixels_per_point) as f64,
                     ),
                     dragging: true,
                 };

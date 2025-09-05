@@ -14,7 +14,7 @@ pub trait Executor: Debug + Send {
     fn clicked(&mut self);
     fn drag_started(&mut self);
     fn update_transform(&mut self, width: f64, height: f64);
-    fn drag(&mut self, delta: Vec2);
+    fn drag(&mut self, delta: Vec2, pixels_per_point: f32);
     fn drag_stop(&mut self);
 }
 
@@ -39,7 +39,7 @@ impl Executor for NoneSelected {
     fn clicked(&mut self) {}
     fn drag_started(&mut self) {}
     fn update_transform(&mut self, _: f64, _: f64) {}
-    fn drag(&mut self, _: Vec2) {}
+    fn drag(&mut self, _: Vec2, _: f32) {}
     fn drag_stop(&mut self) {}
 }
 // pub fn add_shapes_to_scene(scene: &mut Scene, width: u32, height: u32) {
