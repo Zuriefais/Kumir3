@@ -155,7 +155,6 @@ impl Runtime for PythonRuntime {
 
     fn run(&mut self) -> Result<(), String> {
         self.interpreter.enter(|vm: &VirtualMachine| {
-            vm.add_opcode_hook();
             let scope = vm.new_scope_with_builtins();
 
             register_module!(
