@@ -1,9 +1,10 @@
 use std::{cell::RefCell, rc::Rc};
 
+use hashbrown::HashMap;
 use log::{error, info};
 
 use crate::{
-    ast::{AstNode, Environment, NativeFunction, Stmt},
+    ast::{AstNode, Environment, FunctionVariant, Namespace, NativeFunction, Stmt},
     lexer::{Lexer, Token},
     parser::Parser,
 };
@@ -42,6 +43,27 @@ impl Interpreter {
         self.environment
             .borrow_mut()
             .register_function(name, crate::ast::FunctionVariant::Native(function));
+    }
+
+    pub fn register_native_function_in_namespace(
+        &mut self,
+        name: &str,
+        function: NativeFunction,
+        namespace: &str,
+    ) {
+        self.environment
+            .borrow_mut()
+            .register_function_in_namespace(
+                namespace,
+                name,
+                crate::ast::FunctionVariant::Native(function),
+            );
+    }
+
+    pub fn register_namespace(&mut self, name: &str, namespace: Namespace) {
+        self.environment
+            .borrow_mut()
+            .register_namespace(name, namespace);
     }
 
     pub fn new(ast: AstNode) -> Self {

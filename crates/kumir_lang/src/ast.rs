@@ -18,6 +18,7 @@ impl AstNode {
             environment: Some(environment.clone()),
             variables: Default::default(),
             functions: environment.borrow().functions.clone(),
+            namespaces: environment.borrow().namespaces.clone(),
         }));
         info!("scope variables: {:#?}", scope.borrow().get_all_vars());
         match self {
@@ -56,7 +57,19 @@ pub enum Stmt {
     RepeatLoop(RepeatLoop),
     Output { values: Vec<Expr> },
     FunctionCall(FunctionCall),
+    ImportNamespace(ImportNamespace),
     Break,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ImportNamespace {
+    pub name: String,
+}
+
+impl ImportNamespace {
+    fn eval(&self, environment: &Rc<RefCell<Environment>>) -> Result<(), String> {
+        environment.borrow_mut().import_namespace(&self.name)
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -264,6 +277,7 @@ impl FunctionCall {
             let scope: Rc<RefCell<Environment>> = Rc::new(RefCell::new({
                 let mut scope = Environment::default();
                 scope.functions = environment.functions.clone();
+                scope.namespaces = environment.namespaces.clone();
                 scope
             }));
 
@@ -465,6 +479,7 @@ impl Stmt {
             Stmt::FunctionCall(call) => {
                 call.eval(environment)?;
             }
+            Stmt::ImportNamespace(import_namespace) => import_namespace.eval(environment)?,
         }
         Ok(EvalResult::Procedure)
     }
@@ -645,10 +660,36 @@ pub struct Variable {
     pub value: Option<Literal>,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct Namespace {
+    functions: HashMap<String, FunctionVariant>,
+}
+
+impl Namespace {
+    pub fn get_function(&self, name: &str) -> Option<FunctionVariant> {
+        self.functions
+            .get(&name.to_string())
+            .map_or(None, |function| Some(function.clone()))
+    }
+
+    pub fn register_function(&mut self, name: &str, function: FunctionVariant) {
+        self.functions.insert(name.to_string(), function);
+    }
+
+    pub fn register_native_function(&mut self, name: &str, function: NativeFunction) {
+        self.register_function(name, FunctionVariant::Native(function));
+    }
+
+    pub fn functions(&self) -> &HashMap<String, FunctionVariant> {
+        &self.functions
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Environment {
     pub environment: Option<Rc<RefCell<Environment>>>,
     pub variables: HashMap<String, Variable>,
+    pub namespaces: HashMap<String, Namespace>,
     pub functions: HashMap<String, FunctionVariant>,
 }
 
@@ -657,6 +698,7 @@ impl Default for Environment {
         Self {
             environment: None,
             variables: HashMap::new(),
+            namespaces: HashMap::new(),
             functions: HashMap::new(),
         }
     }
@@ -723,6 +765,38 @@ impl Environment {
 
     pub fn register_function(&mut self, name: &str, function: FunctionVariant) {
         self.functions.insert(name.to_string(), function);
+    }
+
+    pub fn register_function_in_namespace(
+        &mut self,
+        namespace_name: &str,
+        name: &str,
+        function: FunctionVariant,
+    ) {
+        let namespace_name = namespace_name.to_string();
+        if let Some(namespace) = self.namespaces.get_mut(&namespace_name) {
+            namespace.register_function(name, function);
+        } else {
+            let mut namespace: Namespace = Default::default();
+            namespace.register_function(name, function);
+            self.namespaces.insert(namespace_name, namespace);
+        }
+    }
+
+    pub fn import_namespace(&mut self, name: &str) -> Result<(), String> {
+        let namespace = self
+            .namespaces
+            .get_mut(&name.to_string())
+            .ok_or(format!("Namespace with name: {:?} not found", name))?
+            .clone();
+        for (name, function) in namespace.functions().into_iter() {
+            self.register_function(&name, function.clone());
+        }
+        Ok(())
+    }
+
+    pub fn register_namespace(&mut self, name: &str, namespace: Namespace) {
+        self.namespaces.insert(name.to_string(), namespace);
     }
 
     pub fn get_function(&self, name: &str) -> Option<FunctionVariant> {

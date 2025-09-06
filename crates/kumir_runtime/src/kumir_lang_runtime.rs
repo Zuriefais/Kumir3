@@ -1,6 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use indexmap::IndexMap;
+use kumir_lang::ast::{FunctionVariant, Namespace};
 use kumir_lang::{ast::Literal, lexer::TypeDefinition};
 use kumir_lang::{
     ast::{Environment, NativeFunction},
@@ -56,6 +57,20 @@ impl Runtime for KumirLangRuntime {
     fn init(requirements: RuntimeRequirements, _: Lang, code: String) -> Result<Self, String> {
         info!("Initializing KuMir lang runtime");
         let mut interpreter = Interpreter::new_from_string(&code)?;
+        interpreter.register_namespace("Робот", {
+            let mut namespace: Namespace = Default::default();
+            namespace.register_native_function(
+                "test",
+                NativeFunction {
+                    params: IndexMap::new(),
+                    return_type: Some(TypeDefinition::Bool),
+                    native_function: Rc::new(RefCell::new(move |_: &Rc<RefCell<Environment>>| {
+                        Ok(Some(Literal::Bool(true)))
+                    })),
+                },
+            );
+            namespace
+        });
         register!(&mut interpreter, requirements, move_up, "вверх");
         register!(&mut interpreter, requirements, move_down, "вниз");
         register!(&mut interpreter, requirements, move_left, "влево");

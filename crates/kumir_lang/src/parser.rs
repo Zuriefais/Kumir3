@@ -36,6 +36,9 @@ impl Parser {
     fn parse_stmt(&mut self) -> Result<Stmt, String> {
         match self.current_token().clone() {
             Token::Keyword(Keyword::Function(lexer::Function::Alg)) => self.parse_alg(),
+            Token::Keyword(Keyword::Function(lexer::Function::ImportNamespace)) => {
+                self.parse_import_namespace()
+            }
             Token::Keyword(Keyword::Condition(lexer::Condition::If)) => self.parse_condition(),
             Token::Keyword(Keyword::Loop(lexer::Loop::Start)) => self.parse_loop(),
             Token::Keyword(Keyword::Loop(lexer::Loop::Break)) => Ok(Stmt::Break),
@@ -50,6 +53,17 @@ impl Parser {
             Token::Keyword(Keyword::IO(io_keyword)) => self.parse_io(io_keyword),
             _ => Err(format!("Unexpected token: {:?}", self.current_token())),
         }
+    }
+
+    fn parse_import_namespace(&mut self) -> Result<Stmt, String> {
+        //Skip import namespace token
+        self.advance();
+        let name = self.current_token().identifier().ok_or(format!(
+            "Error parsing import namespace expected identifier found {:?}",
+            self.current_token()
+        ))?;
+        self.advance();
+        Ok(Stmt::ImportNamespace(ImportNamespace { name }))
     }
 
     fn parse_function_call_stmt(&mut self, name: &str) -> Result<Stmt, String> {

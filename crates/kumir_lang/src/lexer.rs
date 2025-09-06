@@ -51,6 +51,14 @@ impl Token {
             false
         }
     }
+
+    pub fn identifier(&self) -> Option<String> {
+        if let Token::Identifier(name) = self {
+            Some(name.clone())
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -127,6 +135,8 @@ pub enum Keyword {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Function {
+    ///использовать
+    ImportNamespace,
     ///алг
     Alg,
     ///нач
@@ -254,6 +264,7 @@ impl From<&str> for Keyword {
             "аргрез" => Keyword::Function(Function::FunctionParamType(
                 FunctionParamType::ArgumentResultParam,
             )),
+            "использовать" => Keyword::Function(Function::ImportNamespace),
             _ => {
                 panic!("Error")
             }
@@ -453,6 +464,7 @@ impl Lexer {
                 "рез",
                 "аргрез",
                 "дано",
+                "использовать",
             ]
             .contains(&word.as_str())
             {
@@ -468,10 +480,9 @@ impl Lexer {
             }
             if let Some(char) = self.current_char {
                 if char == ' '
-                    && self
-                        .input
-                        .get(self.position + 1)
-                        .is_some_and(|c| c.is_alphanumeric() || *c == '_')
+                    && self.input.get(self.position).is_some_and(|c| {
+                        (c.is_alphanumeric() && !['(', ')'].contains(c)) || *c == '_'
+                    })
                 {
                     word.push(' ');
                     self.advance();

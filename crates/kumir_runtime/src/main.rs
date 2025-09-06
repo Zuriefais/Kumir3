@@ -12,6 +12,7 @@ pub fn main() {
         include_str!("test.kum").to_string(),
     )
     .unwrap();
+
     if let Err(err) = target.run() {
         error!("{err}")
     };
