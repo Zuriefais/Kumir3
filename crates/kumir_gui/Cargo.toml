@@ -13,7 +13,7 @@ egui_tiles = "0.12.0"
 kumir_runtime = { workspace = true }
 
 winit = "0.30.9"
-wasm_thread = "*"
+wasm_thread = {workspace=true}
 log = { workspace = true }
 vello = "0.5.1"
 anyhow = "1.0.98"

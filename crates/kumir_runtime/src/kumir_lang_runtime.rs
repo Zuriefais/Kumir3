@@ -1,3 +1,5 @@
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::{cell::RefCell, rc::Rc};
 
 use indexmap::IndexMap;
@@ -54,9 +56,14 @@ pub struct KumirLangRuntime {
 }
 
 impl Runtime for KumirLangRuntime {
-    fn init(requirements: RuntimeRequirements, _: Lang, code: String) -> Result<Self, String> {
+    fn init(
+        requirements: RuntimeRequirements,
+        _: Lang,
+        code: String,
+        kill_flag: Arc<AtomicBool>,
+    ) -> Result<Self, String> {
         info!("Initializing KuMir lang runtime");
-        let mut interpreter = Interpreter::new_from_string(&code)?;
+        let mut interpreter = Interpreter::new_from_string(&code, kill_flag)?;
         interpreter.register_namespace("Робот", {
             let mut namespace: Namespace = Default::default();
             namespace.register_native_function(

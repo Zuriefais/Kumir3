@@ -2,7 +2,8 @@ pub mod console_runtime_requirements;
 pub mod kumir_lang_runtime;
 pub mod python_runtime;
 use std::fmt;
-use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, mpsc};
 
 use crate::kumir_lang_runtime::KumirLangRuntime;
 use crate::python_runtime::PythonRuntime;
@@ -30,17 +31,24 @@ pub enum Target {
 }
 
 impl Runtime for Target {
-    fn init(requirements: RuntimeRequirements, lang: Lang, code: String) -> Result<Self, String> {
+    fn init(
+        requirements: RuntimeRequirements,
+        lang: Lang,
+        code: String,
+        kill_flag: Arc<AtomicBool>,
+    ) -> Result<Self, String> {
         match lang {
             Lang::Kumir => Ok(Target::KumirLang(KumirLangRuntime::init(
                 requirements,
                 lang,
                 code,
+                kill_flag,
             )?)),
             Lang::Python => Ok(Target::Python(PythonRuntime::init(
                 requirements,
                 lang,
                 code,
+                kill_flag,
             )?)),
         }
     }
@@ -81,7 +89,12 @@ pub trait RobotRequirements {
 }
 
 pub trait Runtime {
-    fn init(requirements: RuntimeRequirements, lang: Lang, code: String) -> Result<Self, String>
+    fn init(
+        requirements: RuntimeRequirements,
+        lang: Lang,
+        code: String,
+        kill_flag: Arc<AtomicBool>,
+    ) -> Result<Self, String>
     where
         Self: Sized;
 

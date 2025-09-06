@@ -1,4 +1,8 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::RefCell,
+    rc::Rc,
+    sync::{Arc, atomic::AtomicBool},
+};
 
 use hashbrown::HashMap;
 use log::{error, info};
@@ -66,19 +70,19 @@ impl Interpreter {
             .register_namespace(name, namespace);
     }
 
-    pub fn new(ast: AstNode) -> Self {
+    pub fn new(ast: AstNode, kill_flag: Arc<AtomicBool>) -> Self {
         Interpreter {
             ast,
             environment: Default::default(),
         }
     }
 
-    pub fn new_from_tokens(tokens: Vec<Token>) -> Result<Self, String> {
+    pub fn new_from_tokens(tokens: Vec<Token>, kill_flag: Arc<AtomicBool>) -> Result<Self, String> {
         let mut parser = Parser::new(tokens);
         match parser.parse() {
             Ok(ast) => {
                 info!("AST generated: {ast:#?}");
-                let interpreter = Interpreter::new(ast);
+                let interpreter = Interpreter::new(ast, kill_flag);
                 return Ok(interpreter);
             }
             Err(err) => {
@@ -91,7 +95,7 @@ impl Interpreter {
         }
     }
 
-    pub fn new_from_string(input: &str) -> Result<Self, String> {
+    pub fn new_from_string(input: &str, kill_flag: Arc<AtomicBool>) -> Result<Self, String> {
         let mut lexer = Lexer::new(input);
         let mut tokens = vec![];
         loop {
@@ -112,6 +116,6 @@ impl Interpreter {
             "tokens parsed: {:#?}",
             tokens.iter().enumerate().collect::<Vec<_>>()
         );
-        Self::new_from_tokens(tokens)
+        Self::new_from_tokens(tokens, kill_flag)
     }
 }

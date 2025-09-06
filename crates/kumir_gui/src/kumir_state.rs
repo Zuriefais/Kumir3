@@ -3,6 +3,7 @@ use crate::executors::{Executor, NoneSelected};
 use egui::{Pos2, Vec2};
 
 use std::fmt;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 
 use vello::Scene;
@@ -190,6 +191,7 @@ pub struct KumirState {
     pub modes: ModesStored,
     // pub visual_mode: VisualMode,
     pub min_point: Pos2,
+    pub kill_flag: Arc<AtomicBool>,
 }
 
 impl KumirState {
@@ -221,6 +223,7 @@ impl KumirState {
             },
             // visual_mode: VisualMode::Dark,
             min_point: Pos2::new(10.0, 85.0),
+            kill_flag: Default::default(),
         }
     }
 

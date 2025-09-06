@@ -1,4 +1,9 @@
-use std::{cell::RefCell, fmt::Display, rc::Rc};
+use std::{
+    cell::RefCell,
+    fmt::{Display, format},
+    rc::Rc,
+    sync::{Arc, atomic::AtomicBool},
+};
 
 use hashbrown::HashMap;
 use indexmap::IndexMap;
@@ -19,6 +24,7 @@ impl AstNode {
             variables: Default::default(),
             functions: environment.borrow().functions.clone(),
             namespaces: environment.borrow().namespaces.clone(),
+            kill_flag: environment.borrow().kill_flag.clone(),
         }));
         info!("scope variables: {:#?}", scope.borrow().get_all_vars());
         match self {
@@ -278,6 +284,7 @@ impl FunctionCall {
                 let mut scope = Environment::default();
                 scope.functions = environment.functions.clone();
                 scope.namespaces = environment.namespaces.clone();
+                scope.kill_flag = environment.kill_flag.clone();
                 scope
             }));
 
@@ -437,6 +444,11 @@ pub enum EvalResult {
 
 impl Stmt {
     pub fn eval(&self, environment: &Rc<RefCell<Environment>>) -> Result<EvalResult, String> {
+        let kill_flag = environment.borrow().kill_flag.clone();
+        if kill_flag.load(std::sync::atomic::Ordering::Relaxed) {
+            kill_flag.store(false, std::sync::atomic::Ordering::Relaxed);
+            return Err(format!("User interrupt"));
+        }
         match self {
             Stmt::VarDecl(var_decl) => {
                 let mut environment_mut = environment.borrow_mut();
@@ -691,6 +703,7 @@ pub struct Environment {
     pub variables: HashMap<String, Variable>,
     pub namespaces: HashMap<String, Namespace>,
     pub functions: HashMap<String, FunctionVariant>,
+    pub kill_flag: Arc<AtomicBool>,
 }
 
 impl Default for Environment {
@@ -700,6 +713,7 @@ impl Default for Environment {
             variables: HashMap::new(),
             namespaces: HashMap::new(),
             functions: HashMap::new(),
+            kill_flag: Default::default(),
         }
     }
 }
@@ -820,5 +834,9 @@ impl Environment {
             vars.extend(environment.borrow().get_all_vars().iter().cloned())
         }
         vars
+    }
+
+    pub fn set_kill_flag(&mut self, kill_flag: Arc<AtomicBool>) {
+        self.kill_flag = kill_flag
     }
 }

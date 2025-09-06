@@ -1,3 +1,11 @@
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
+};
+
 use crate::{Lang, Runtime, RuntimeRequirements};
 use log::{error, info};
 use rustpython::vm::{PyResult, VirtualMachine};
@@ -12,6 +20,7 @@ pub struct PythonRuntime {
     requirements: RuntimeRequirements,
     interpreter: rustpython_vm::Interpreter,
     code: String,
+    kill_flag: Arc<AtomicBool>,
 }
 
 fn parse_rustpython_error(err: PyRef<PyBaseException>) -> String {
@@ -102,21 +111,51 @@ macro_rules! register_function {
 }
 
 impl Runtime for PythonRuntime {
-    fn init(requirements: RuntimeRequirements, _: Lang, code: String) -> Result<Self, String> {
+    fn init(
+        requirements: RuntimeRequirements,
+        _: Lang,
+        code: String,
+        kill_flag: Arc<AtomicBool>,
+    ) -> Result<Self, String> {
         info!("Initializing Python runtime");
+        let kill_flag_clone = kill_flag.clone();
         let interpreter = rustpython::InterpreterConfig::new()
             .init_stdlib()
+            .init_hook(Box::new(move |vm: &mut VirtualMachine| {
+                let (signal_tx, signal_rx) = rustpython_vm::signal::user_signal_channel();
+                let kill_flag = kill_flag_clone;
+                wasm_thread::spawn(move || {
+                    loop {
+                        if kill_flag.load(Ordering::Relaxed) {
+                            kill_flag.store(false, Ordering::Relaxed);
+                            let _ =
+                                signal_tx.send(Box::new(|vm: &VirtualMachine| -> PyResult<()> {
+                                    Err(vm.new_exception_empty(
+                                        vm.ctx.exceptions.keyboard_interrupt.to_owned(),
+                                    ))
+                                }));
+
+                            break;
+                        }
+
+                        std::thread::sleep(Duration::from_millis(50));
+                    }
+                });
+                vm.set_user_signal_channel(signal_rx);
+            }))
             .interpreter();
 
         Ok(Self {
             requirements,
             interpreter,
             code,
+            kill_flag,
         })
     }
 
     fn run(&mut self) -> Result<(), String> {
         self.interpreter.enter(|vm: &VirtualMachine| {
+            vm.add_opcode_hook();
             let scope = vm.new_scope_with_builtins();
 
             register_module!(
@@ -148,6 +187,7 @@ impl Runtime for PythonRuntime {
 
             vm.run_code_obj(code_obj, scope).map_err(|err| {
                 let mut output = String::new();
+
                 match vm.write_exception_inner(&mut output, &err) {
                     Ok(_) => return output,
                     Err(args) => {
