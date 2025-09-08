@@ -29,27 +29,15 @@ impl Token {
     }
 
     pub fn is_keyword(&self, keyword: Keyword) -> bool {
-        if self == &Token::Keyword(keyword) {
-            true
-        } else {
-            false
-        }
+        self == &Token::Keyword(keyword)
     }
 
     pub fn is_delimiter(&self, delimiter: Delimiter) -> bool {
-        if self == &Token::Delimiter(delimiter) {
-            true
-        } else {
-            false
-        }
+        self == &Token::Delimiter(delimiter)
     }
 
     pub fn is_operator(&self, operator: Operator) -> bool {
-        if self == &Token::Operator(operator) {
-            true
-        } else {
-            false
-        }
+        self == &Token::Operator(operator)
     }
 
     pub fn identifier(&self) -> Option<String> {
@@ -478,8 +466,8 @@ impl Lexer {
             } else if word.as_str() == "надо" {
                 return self.next_token();
             }
-            if let Some(char) = self.current_char {
-                if char == ' '
+            if let Some(char) = self.current_char
+                && char == ' '
                     && self.input.get(self.position).is_some_and(|c| {
                         (c.is_alphanumeric() && !['(', ')'].contains(c)) || *c == '_'
                     })
@@ -487,7 +475,6 @@ impl Lexer {
                     word.push(' ');
                     self.advance();
                 }
-            }
         }
         Ok(Token::Identifier(word))
     }

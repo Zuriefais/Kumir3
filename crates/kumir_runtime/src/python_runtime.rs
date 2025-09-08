@@ -191,9 +191,9 @@ impl Runtime for PythonRuntime {
                     Ok(_) => return output,
                     Err(args) => {
                         error!("Failed to use ready parser: {:?}", args);
-                        return parse_rustpython_error(err);
+                        parse_rustpython_error(err)
                     }
-                };
+                }
             })?;
 
             Ok(())

@@ -3,7 +3,7 @@ pub mod kumir_lang_runtime;
 pub mod python_runtime;
 use std::fmt;
 use std::sync::atomic::AtomicBool;
-use std::sync::{Arc, mpsc};
+use std::sync::Arc;
 
 use crate::kumir_lang_runtime::KumirLangRuntime;
 use crate::python_runtime::PythonRuntime;

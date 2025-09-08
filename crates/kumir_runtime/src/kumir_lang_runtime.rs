@@ -3,7 +3,7 @@ use std::sync::atomic::AtomicBool;
 use std::{cell::RefCell, rc::Rc};
 
 use indexmap::IndexMap;
-use kumir_lang::ast::{FunctionVariant, Namespace};
+use kumir_lang::ast::Namespace;
 use kumir_lang::{ast::Literal, lexer::TypeDefinition};
 use kumir_lang::{
     ast::{Environment, NativeFunction},

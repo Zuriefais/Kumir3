@@ -46,7 +46,7 @@ fn main() {
                         params
                     },
                     return_type: Some(TypeDefinition::Float),
-                    native_function: Rc::new(RefCell::new(|environment: &Rc<RefCell<Environment>>| -> Result<Option<kumir_lang::ast::Literal>, String> {let num = environment.borrow().get_value("число").unwrap(); if let Literal::Float(num) = num {return Ok(Some(Literal::Float(num*40.0)))} return Err(format!("Err")); })),
+                    native_function: Rc::new(RefCell::new(|environment: &Rc<RefCell<Environment>>| -> Result<Option<kumir_lang::ast::Literal>, String> {let num = environment.borrow().get_value("число").unwrap(); if let Literal::Float(num) = num {return Ok(Some(Literal::Float(num*40.0)))} Err("Err".to_string())})),
                 },
             );
 

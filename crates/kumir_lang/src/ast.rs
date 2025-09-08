@@ -1,6 +1,6 @@
 use std::{
     cell::RefCell,
-    fmt::{Display, format},
+    fmt::Display,
     rc::Rc,
     sync::{Arc, atomic::AtomicBool},
 };
@@ -98,7 +98,7 @@ fn check_condition(
 impl Loop {
     fn eval(&self, environment: &Rc<RefCell<Environment>>) -> Result<(), String> {
         if let Some(condition) = self.condition.as_ref() {
-            while check_condition(&condition, environment)? {
+            while check_condition(condition, environment)? {
                 if EvalResult::Break == self.body.eval(environment)? {
                     break;
                 };
@@ -164,13 +164,13 @@ pub struct Condition {
 
 impl Condition {
     fn eval(&self, environment: &Rc<RefCell<Environment>>) -> Result<(), String> {
-        if {
+        let res = {
             let condition_val = self.condition.eval(environment)?;
             match condition_val {
                 Literal::Bool(value) => value,
                 _ => return Err(format!("{condition_val:?} must be a boolean value")),
             }
-        } {
+        }; if res {
             self.left.eval(environment)?;
         } else if let Some(right) = self.right.as_ref() {
             right.eval(environment)?;
@@ -200,11 +200,10 @@ impl RepeatLoop {
             if times == 0 {
                 break;
             }
-            if let Some(condition) = self.condition.as_ref() {
-                if !check_condition(condition, environment)? {
+            if let Some(condition) = self.condition.as_ref()
+                && !check_condition(condition, environment)? {
                     break;
                 }
-            }
             times -= 1;
         }
         Ok(())
@@ -266,7 +265,7 @@ impl FunctionCall {
             for (i, arg) in args.iter() {
                 if params
                     .get_index(*i)
-                    .ok_or(format!("Couldn't "))?
+                    .ok_or("Couldn't ".to_string())?
                     .1
                     .type_definition
                     != arg.get_type()
@@ -325,7 +324,7 @@ impl FunctionCall {
                 }
 
                 if let Some(return_type) = return_type {
-                    scope_mut.new_var("знач".into(), None, return_type);
+                    scope_mut.new_var("знач", None, return_type);
                     is_function = true;
                 }
             }
@@ -341,9 +340,9 @@ impl FunctionCall {
             for name in value_to_return_from_function {
                 let value = scope
                     .get_var(&name)
-                    .ok_or(format!("Couldn't find variable"))?
+                    .ok_or("Couldn't find variable".to_string())?
                     .value
-                    .ok_or(format!("Variable value is None"))?;
+                    .ok_or("Variable value is None".to_string())?;
                 environment.assign_var(&name, value)?;
             }
 
@@ -353,10 +352,10 @@ impl FunctionCall {
                 }
                 let value = scope
                     .get_value("знач")
-                    .ok_or(format!("Value of alg func is nothing"))?;
-                return Ok(FunctionResult::Literal(value));
+                    .ok_or("Value of alg func is nothing".to_string())?;
+                Ok(FunctionResult::Literal(value))
             } else {
-                return Ok(FunctionResult::Procedure);
+                Ok(FunctionResult::Procedure)
             }
         };
 
@@ -447,7 +446,7 @@ impl Stmt {
         let kill_flag = environment.borrow().kill_flag.clone();
         if kill_flag.load(std::sync::atomic::Ordering::Relaxed) {
             kill_flag.store(false, std::sync::atomic::Ordering::Relaxed);
-            return Err(format!("User interrupt"));
+            return Err("User interrupt".to_string());
         }
         match self {
             Stmt::VarDecl(var_decl) => {
@@ -608,7 +607,7 @@ impl Expr {
                     match call.eval(environment)? {
                         FunctionResult::Literal(literal) => Ok(literal),
                         FunctionResult::Procedure => {
-                            Err(format!("This alg is procedure not function"))
+                            Err("This alg is procedure not function".to_string())
                         }
                     }
                 } else if let Some(value) = environment.borrow().get_value(name) {
@@ -618,10 +617,10 @@ impl Expr {
                 }
             }
             Expr::BinaryOp(binary_op) => binary_op.eval(environment),
-            Expr::NewLine => return Err(format!("New line couldn't be Literal")),
+            Expr::NewLine => Err("New line couldn't be Literal".to_string()),
             Expr::FunctionCall(call) => match call.eval(environment)? {
                 FunctionResult::Literal(literal) => Ok(literal),
-                FunctionResult::Procedure => Err(format!("This alg is procedure not function")),
+                FunctionResult::Procedure => Err("This alg is procedure not function".to_string()),
             },
         }
     }
@@ -680,8 +679,7 @@ pub struct Namespace {
 impl Namespace {
     pub fn get_function(&self, name: &str) -> Option<FunctionVariant> {
         self.functions
-            .get(&name.to_string())
-            .map_or(None, |function| Some(function.clone()))
+            .get(&name.to_string()).cloned()
     }
 
     pub fn register_function(&mut self, name: &str, function: FunctionVariant) {
@@ -804,7 +802,7 @@ impl Environment {
             .ok_or(format!("Namespace with name: {:?} not found", name))?
             .clone();
         for (name, function) in namespace.functions().into_iter() {
-            self.register_function(&name, function.clone());
+            self.register_function(name, function.clone());
         }
         Ok(())
     }

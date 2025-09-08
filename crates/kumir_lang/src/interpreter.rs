@@ -4,11 +4,10 @@ use std::{
     sync::{Arc, atomic::AtomicBool},
 };
 
-use hashbrown::HashMap;
 use log::{error, info};
 
 use crate::{
-    ast::{AstNode, Environment, FunctionVariant, Namespace, NativeFunction, Stmt},
+    ast::{AstNode, Environment, Namespace, NativeFunction, Stmt},
     lexer::{Lexer, Token},
     parser::Parser,
 };
@@ -83,14 +82,14 @@ impl Interpreter {
             Ok(ast) => {
                 info!("AST generated: {ast:#?}");
                 let interpreter = Interpreter::new(ast, kill_flag);
-                return Ok(interpreter);
+                Ok(interpreter)
             }
             Err(err) => {
                 let (statements, err) = err;
                 error!("Error parsing AST: {}", err);
                 error!("Statements parsed: {:#?}", statements);
                 error!("AST generator stopped at token: {}", parser.position);
-                return Err(format!("Error creating interpreter"));
+                Err("Error creating interpreter".to_string())
             }
         }
     }

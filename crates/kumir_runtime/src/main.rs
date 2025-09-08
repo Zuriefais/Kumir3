@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use kumir_runtime::{
     Runtime, Target, console_runtime_requirements::ConsoleRuntimeRequirements,
-    kumir_lang_runtime::KumirLangRuntime,
 };
 use log::{error, info};
 

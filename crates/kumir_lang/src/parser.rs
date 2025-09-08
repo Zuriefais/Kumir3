@@ -110,7 +110,7 @@ impl Parser {
         match io_keyword {
             IO::Input => self.parse_input(),
             IO::Output => self.parse_output(),
-            IO::ChangeLine => return Err(format!("Change line couldn't be Statement")),
+            IO::ChangeLine => Err("Change line couldn't be Statement".to_string()),
         }
     }
 
@@ -332,7 +332,7 @@ impl Parser {
                     if let Token::Keyword(Keyword::TypeDef(type_def)) = self.current_token() {
                         *type_def
                     } else {
-                        return Err(format!("Typedef for function parameter required"));
+                        return Err("Typedef for function parameter required".to_string());
                     }
                 };
 
