@@ -220,8 +220,22 @@ impl Robot {
 
         match self.hovered {
             Hovered::Robot { delta, dragging: _ } => {
-                center_x += delta.x / self.get_scale();
-                center_y += delta.y / self.get_scale();
+                if self.o + self.cell_size * self.get_scale() * (self.width as f64)
+                    > center_x + delta.x
+                    && center_x + delta.x > self.o
+                    && self.i + self.cell_size * self.get_scale() * (self.height as f64)
+                        > center_y + delta.y
+                    && center_y + delta.y > self.i
+                {
+                    center_x +=
+                        (delta.x / self.get_scale() / self.cell_size).round() * self.cell_size;
+
+                    center_y +=
+                        (delta.y / self.get_scale() / self.cell_size).round() * self.cell_size;
+                } else {
+                    center_x += delta.x / self.get_scale();
+                    center_y += delta.y / self.get_scale();
+                }
             }
             _ => (),
         }

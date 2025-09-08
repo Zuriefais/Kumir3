@@ -1,6 +1,6 @@
 use crate::kumir_state::{KumirState, Modes};
 use crate::runtime_requirements::GuiRuntimeRequirements;
-use crate::widgets::robot_gui::RobotWidget;
+use crate::widgets::{robot_gui::RobotWidget, terminal::Terminal};
 use egui::Ui;
 use egui::{Align2, Sense, TextureId, load::SizedTexture};
 use egui_extras::syntax_highlighting::{CodeTheme, highlight};
@@ -91,7 +91,9 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
             Pane::Unknown(nr) => {
                 ui.label(format!("The contents of pane {nr}."));
             }
-            Pane::Terminal => todo!(),
+            Pane::Terminal => {
+                ui.add(Terminal {});
+            }
             Pane::IDE(options) => {
                 ui.label("Самое современное IDE");
                 ui.horizontal(|ui| {
@@ -277,6 +279,7 @@ pub fn create_tree(vello_options: Arc<Mutex<VelloWindowOptions>>) -> egui_tiles:
         lang: Lang::Python,
         sleep_duration: 200,
     })));
+    tabs.push(tiles.insert_pane(Pane::Terminal));
 
     let root = tiles.insert_tab_tile(tabs);
 
