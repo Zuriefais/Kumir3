@@ -70,10 +70,10 @@ impl Interpreter {
     }
 
     pub fn new(ast: AstNode, kill_flag: Arc<AtomicBool>) -> Self {
-        Interpreter {
-            ast,
-            environment: Default::default(),
-        }
+        let mut environment: Environment = Default::default();
+        environment.kill_flag = kill_flag;
+        let environment = Rc::new(RefCell::new(environment));
+        Interpreter { ast, environment }
     }
 
     pub fn new_from_tokens(tokens: Vec<Token>, kill_flag: Arc<AtomicBool>) -> Result<Self, String> {

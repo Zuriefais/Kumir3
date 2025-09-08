@@ -170,7 +170,8 @@ impl Condition {
                 Literal::Bool(value) => value,
                 _ => return Err(format!("{condition_val:?} must be a boolean value")),
             }
-        }; if res {
+        };
+        if res {
             self.left.eval(environment)?;
         } else if let Some(right) = self.right.as_ref() {
             right.eval(environment)?;
@@ -201,9 +202,10 @@ impl RepeatLoop {
                 break;
             }
             if let Some(condition) = self.condition.as_ref()
-                && !check_condition(condition, environment)? {
-                    break;
-                }
+                && !check_condition(condition, environment)?
+            {
+                break;
+            }
             times -= 1;
         }
         Ok(())
@@ -678,8 +680,7 @@ pub struct Namespace {
 
 impl Namespace {
     pub fn get_function(&self, name: &str) -> Option<FunctionVariant> {
-        self.functions
-            .get(&name.to_string()).cloned()
+        self.functions.get(&name.to_string()).cloned()
     }
 
     pub fn register_function(&mut self, name: &str, function: FunctionVariant) {
