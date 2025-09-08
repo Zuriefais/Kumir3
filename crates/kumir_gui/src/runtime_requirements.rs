@@ -10,7 +10,7 @@ macro_rules! call_method_in_enum {
         match $object {
             $class::$variant(executor) => {
                 let mut obj = executor.lock().unwrap();
-                return (&mut obj).$method_name();
+                obj.$method_name()
             }
             _ => Err("Выбранный исполнитель отличается от загружаемого".to_string()),
         }
@@ -19,7 +19,7 @@ macro_rules! call_method_in_enum {
         match $object {
             $class::$variant(executor) => {
                 let mut obj = executor.lock().unwrap();
-                return obj.$method_name($($arg),+);
+                obj.$method_name($($arg),+)
             }
             _ => Err("Выбранный исполнитель отличается от загружаемого".to_string()),
         }
@@ -39,27 +39,27 @@ impl RuntimeRequirementsTrait for GuiRuntimeRequirements {
 
 impl RobotRequirements for GuiRuntimeRequirements {
     fn move_up(&self) -> FuncResult<()> {
-        call_method_in_enum!(self.mode.clone(), Modes::Robot, move_up)?;
+        let res = call_method_in_enum!(self.mode.clone(), Modes::Robot, move_up);
         thread::sleep(self.sleep_duration);
-        Ok(None)
+        res
     }
 
     fn move_down(&self) -> FuncResult<()> {
-        call_method_in_enum!(self.mode.clone(), Modes::Robot, move_down)?;
+        let res = call_method_in_enum!(self.mode.clone(), Modes::Robot, move_down);
         thread::sleep(self.sleep_duration);
-        Ok(None)
+        res
     }
 
     fn move_left(&self) -> FuncResult<()> {
-        call_method_in_enum!(self.mode.clone(), Modes::Robot, move_left)?;
+        let res = call_method_in_enum!(self.mode.clone(), Modes::Robot, move_left);
         thread::sleep(self.sleep_duration);
-        Ok(None)
+        res
     }
 
     fn move_right(&self) -> FuncResult<()> {
-        call_method_in_enum!(self.mode.clone(), Modes::Robot, move_right)?;
+        let res = call_method_in_enum!(self.mode.clone(), Modes::Robot, move_right);
         thread::sleep(self.sleep_duration);
-        Ok(None)
+        res
     }
 
     fn paint(&self) -> FuncResult<()> {

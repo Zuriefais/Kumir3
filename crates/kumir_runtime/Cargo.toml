@@ -7,6 +7,7 @@ edition = "2024"
 kumir_lang = { workspace = true }
 log = { workspace = true }
 indexmap = { workspace = true }
+wasm_thread = {workspace=true}
 env_logger = "0.11.8"
 rustpython = "*"
 rustpython-vm = "*"

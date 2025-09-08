@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use kumir_runtime::{Runtime, Target, console_runtime_requirements::ConsoleRuntimeRequirements};
+use kumir_runtime::{
+    Runtime, Target, console_runtime_requirements::ConsoleRuntimeRequirements,
+    kumir_lang_runtime::KumirLangRuntime,
+};
 use log::{error, info};
 
 pub fn main() {
@@ -10,6 +13,7 @@ pub fn main() {
         Arc::new(ConsoleRuntimeRequirements {}),
         kumir_runtime::Lang::Kumir,
         include_str!("test.kum").to_string(),
+        Default::default(),
     )
     .unwrap();
 

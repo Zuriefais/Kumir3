@@ -131,6 +131,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                         let lang = options.lang.clone();
                         let code = options.code.clone();
                         let duration = options.sleep_duration.clone();
+                        let kill_flag = self.kumir_state.kill_flag.clone();
                         thread::spawn(move || {
                             info!("Starting runtime");
 
@@ -141,6 +142,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                                 }),
                                 lang,
                                 code,
+                                kill_flag,
                             )
                             .unwrap();
                             if let Err(err) = target.run() {
@@ -151,6 +153,9 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                     }
 
                     if ui.add(egui::Button::new("Остановить")).clicked() {
+                        self.kumir_state
+                            .kill_flag
+                            .store(true, std::sync::atomic::Ordering::Relaxed);
                         info!("Something should stop");
                     }
                 });

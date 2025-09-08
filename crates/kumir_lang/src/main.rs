@@ -36,7 +36,7 @@ fn main() {
     match parser.parse() {
         Ok(ast) => {
             info!("AST generated: {ast:#?}");
-            let mut interpreter = Interpreter::new(ast);
+            let mut interpreter = Interpreter::new(ast, Default::default());
             interpreter.register_native_function(
                 "раст",
                 NativeFunction {

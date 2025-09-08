@@ -5,6 +5,7 @@ members = ["crates/*"]
 [workspace.dependencies]
 log = "0.4.27"
 indexmap = "2.10.0"
+wasm_thread = "*"
 
 kumir_gui = { path = "crates/kumir_gui" }
 kumir_lang = { path = "crates/kumir_lang" }
