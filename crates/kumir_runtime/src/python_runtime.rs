@@ -20,6 +20,7 @@ pub struct PythonRuntime {
     requirements: RuntimeRequirements,
     interpreter: rustpython_vm::Interpreter,
     code: String,
+    #[allow(dead_code)]
     kill_flag: Arc<AtomicBool>,
 }
 
@@ -91,6 +92,7 @@ macro_rules! register_module {
     };
 }
 
+#[allow(unused_macros)]
 macro_rules! register_function {
     ($vm:expr, $scope:expr, $requirements:expr, $name:ident) => {
         let func = new_function!($vm, $requirements.clone(), $name);
