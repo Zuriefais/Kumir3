@@ -57,6 +57,7 @@ pub enum Hovered {
 #[derive(Debug)]
 struct FieldParameters {
     fill_color: Color,
+    field_color: Color,
     grid_color: Color,
     stroke_active: Stroke,
     storke_inactive: Stroke,
@@ -120,7 +121,6 @@ impl Robot {
             },
             scene_is_dirty,
             colored: vec![vec![false; height]; width],
-            // fill_color: Color::from_rgb8(39, 143, 40),
             x: 0,
             y: 0,
             o: 0f64,
@@ -134,13 +134,14 @@ impl Robot {
                 deleting_columns_mode: ColumnsMode::FromRight,
             },
             field_parameters: FieldParameters {
-                fill_color: css::DARK_GREEN,
-                grid_color: Color::from_rgb8(200, 200, 16),
+                field_color: Color::from_rgba8(18, 105, 23, 255),
+                fill_color: Color::from_rgba8(3, 3, 3, 255),
+                grid_color: Color::from_rgba8(200, 200, 16, 255),
                 stroke_active: Stroke::new(6.0),
                 storke_inactive: Stroke::new(2.0),
-                cell_color: Color::from_rgb8(147, 112, 219),
-                robot_color: Color::from_rgb8(255, 255, 255),
-                robot_border_color: Color::from_rgb8(0, 0, 0),
+                cell_color: Color::from_rgba8(147, 112, 219, 255),
+                robot_color: Color::from_rgba8(255, 255, 255, 255),
+                robot_border_color: Color::from_rgba8(0, 0, 0, 255),
                 hovered_color: css::BLUE_VIOLET,
             },
         }
@@ -172,7 +173,7 @@ impl Robot {
 
     pub fn draw_grid(&self, scene: &mut Scene) {
         // #[cfg(unix)]
-        // tracy_full::zone!("Vello Draw Grid", tracy_full::color::Color::CYAN, true);
+        // tracy_full::zone!("Vello draw Grid", tracy_full::color::Color::CYAN, true);
         for x in 0..=self.width {
             for y in 0..=self.height {
                 let p1 = Point::new(
@@ -225,7 +226,7 @@ impl Robot {
 
     pub fn draw_robot(&self, scene: &mut Scene) {
         // #[cfg(unix)]
-        // tracy_full::zone!("Vello Draw Robot", tracy_full::color::Color::CYAN, true);
+        // tracy_full::zone!("Vello draw Robot", tracy_full::color::Color::CYAN, true);
         let mut center_x = self.cell_size / 2.0 + self.cell_size * (self.x as f64) + self.o;
         let mut center_y = self.cell_size / 2.0 + self.cell_size * (self.y as f64) + self.i;
 
@@ -594,7 +595,7 @@ impl Executor for Robot {
         scene.fill(
             vello::peniko::Fill::NonZero,
             Affine::IDENTITY,
-            self.field_parameters.fill_color,
+            self.field_parameters.field_color,
             None,
             &Rect::from_origin_size(
                 (self.o, self.i),

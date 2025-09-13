@@ -10,7 +10,7 @@ macro_rules! call_method_in_enum {
         match $object {
             $class::$variant(executor) => {
                 let mut obj = executor.lock().unwrap();
-                obj.$method_name()
+                (&mut obj).$method_name()
             }
             _ => Err("Выбранный исполнитель отличается от загружаемого".to_string()),
         }
@@ -19,7 +19,7 @@ macro_rules! call_method_in_enum {
         match $object {
             $class::$variant(executor) => {
                 let mut obj = executor.lock().unwrap();
-                obj.$method_name($($arg),+)
+                (&mut obj).$method_name($($arg),+)
             }
             _ => Err("Выбранный исполнитель отличается от загружаемого".to_string()),
         }
