@@ -1,3 +1,6 @@
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+
 use crate::executors::Executor;
 use egui::{Pos2, Vec2 as eguiVec2};
 use kumir_runtime::FuncResult;
@@ -24,7 +27,7 @@ pub struct RobotEditingState {
     pub deleting_columns_mode: ColumnsMode,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Hovered {
     Cell {
         min: Point,
@@ -80,12 +83,19 @@ pub struct Robot {
     scale: f64,
     hovered: Hovered,
     field_parameters: FieldParameters,
-
+    scene_is_dirty: Arc<AtomicBool>,
     pub editing_state: RobotEditingState,
 }
 
 impl Robot {
-    pub fn new(width: usize, height: usize, cell_size: f64, center_x: f64, center_y: f64) -> Self {
+    pub fn new(
+        width: usize,
+        height: usize,
+        cell_size: f64,
+        center_x: f64,
+        center_y: f64,
+        scene_is_dirty: Arc<AtomicBool>,
+    ) -> Self {
         // #[cfg(unix)]
         // tracy_full::zone!("Robot Initialization", tracy_full::color::Color::CYAN, true);
         Self {
@@ -108,6 +118,7 @@ impl Robot {
                 }
                 borders
             },
+            scene_is_dirty,
             colored: vec![vec![false; height]; width],
             // fill_color: Color::from_rgb8(39, 143, 40),
             x: 0,
@@ -492,6 +503,11 @@ impl Robot {
         true
     }
 
+    fn scene_dirty(&self) {
+        self.scene_is_dirty
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+    }
+
     pub fn move_right(&mut self) -> FuncResult<()> {
         if self.free_right().unwrap().unwrap() && self.move_robot(1, 0) {
             Ok(None)
@@ -525,6 +541,7 @@ impl Robot {
     }
 
     pub fn paint(&mut self) -> FuncResult<()> {
+        self.scene_dirty();
         self.colored[self.x][self.y] = true;
         Ok(None)
     }
@@ -737,11 +754,15 @@ impl Executor for Robot {
         } else if !dragging_robot {
             self.hovered = Hovered::None;
         }
+        if Hovered::None != self.hovered {
+            self.scene_dirty();
+        }
 
         info!("Hovered: {:?}", self.hovered)
     }
 
     fn clicked(&mut self) {
+        self.scene_dirty();
         info!("Clicked");
         match self.hovered {
             Hovered::Cell {

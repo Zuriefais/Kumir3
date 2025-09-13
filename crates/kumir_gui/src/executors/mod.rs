@@ -1,5 +1,9 @@
 use egui::{Pos2, Vec2};
-use vello::{Scene, peniko::Color};
+use vello::{
+    Scene,
+    kurbo::{Affine, Rect},
+    peniko::Color,
+};
 pub mod robot;
 
 use std::fmt::Debug;
@@ -27,7 +31,6 @@ impl NoneSelected {
 }
 impl Executor for NoneSelected {
     fn clear_field(&self, _: &mut Scene) {}
-    fn draw_field(&mut self, _: &mut Scene) {}
     fn base_color(&self) -> Color {
         Color::BLACK
     }
@@ -41,6 +44,8 @@ impl Executor for NoneSelected {
     fn update_transform(&mut self, _: f64, _: f64) {}
     fn drag(&mut self, _: Vec2, _: f32) {}
     fn drag_stop(&mut self) {}
+
+    fn draw_field(&mut self, scene: &mut Scene) {}
 }
 // pub fn add_shapes_to_scene(scene: &mut Scene, width: u32, height: u32) {
 //     let rob = Robot::new(9, 9, 100.0);

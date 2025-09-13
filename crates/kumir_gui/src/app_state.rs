@@ -193,10 +193,10 @@ impl AppState {
                 create_vello_texture(&self.device, vello_size.width, vello_size.height);
             self.kumir_gui
                 .update_transform(vello_size.width as f64, vello_size.height as f64);
+            self.kumir_gui.kumir_state.poison_scene();
             info!("Updated transform");
         }
         self.vello_scene.lock().unwrap().reset();
-        self.kumir_gui.add_shapes_to_scene();
 
         let screen_descriptor = ScreenDescriptor {
             size_in_pixels: [width, height],
@@ -239,23 +239,29 @@ impl AppState {
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
-        #[cfg(unix)]
-        tracy_full::zone!("Vello Render"); // Zone for Vello rendering
-        self.vello_renderer
-            .render_to_texture(
-                &self.device,
-                &self.queue,
-                &self.vello_scene.lock().unwrap(),
-                &vello_view,
-                &vello::RenderParams {
-                    base_color: self.kumir_gui.base_color(),
-                    width,
-                    height,
-                    antialiasing_method: AaConfig::Area,
-                },
-            )
-            .expect("failed to render to surface");
+        if self.kumir_gui.kumir_state.scene_is_dirty() {
+            let size = self.vello_window_options.lock().unwrap();
+            self.kumir_gui.add_shapes_to_scene();
+            info!("vello rerendered");
 
+            #[cfg(unix)]
+            tracy_full::zone!("Vello Render"); // Zone for Vello rendering
+            self.vello_renderer
+                .render_to_texture(
+                    &self.device,
+                    &self.queue,
+                    &self.vello_scene.lock().unwrap(),
+                    &vello_view,
+                    &vello::RenderParams {
+                        base_color: self.kumir_gui.base_color(),
+                        width,
+                        height,
+                        antialiasing_method: AaConfig::Area,
+                    },
+                )
+                .expect("failed to render to surface");
+            self.kumir_gui.kumir_state.depoison_scene();
+        }
         #[cfg(unix)]
         tracy_full::zone!("Egui Render"); // Zone for eGUI rendering
         self.egui_renderer.begin_frame(window);

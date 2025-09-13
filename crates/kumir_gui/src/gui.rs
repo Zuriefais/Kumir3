@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use crate::kumir_state::KumirState;
+use crate::kumir_state::{self, KumirState};
 use crate::widgets::panes::{Pane, TreeBehavior, VelloWindowOptions, create_tree};
 use crate::widgets::usage_diagnostics::UsageDiagnostics;
 use egui::Context;
@@ -10,7 +10,7 @@ use vello::peniko::color::{AlphaColor, Srgb};
 
 pub struct KumirGui {
     egui_context: Context,
-    kumir_state: KumirState,
+    pub kumir_state: KumirState,
     tree: egui_tiles::Tree<Pane>,
 }
 
@@ -31,7 +31,7 @@ impl KumirGui {
         egui::TopBottomPanel::top("tools").show(&self.egui_context, |ui| {
             ui.horizontal(|ui| {
                 UsageDiagnostics {}.ui(ui);
-
+                let old_mode = self.kumir_state.selected_mode.clone();
                 egui::ComboBox::from_id_salt("mode")
                     .selected_text(self.kumir_state.selected_mode.to_string())
                     .show_ui(ui, |ui| {
@@ -66,6 +66,9 @@ impl KumirGui {
                             "Чертежник",
                         );
                     });
+                if old_mode != self.kumir_state.selected_mode {
+                    self.kumir_state.poison_scene();
+                }
             })
         });
 

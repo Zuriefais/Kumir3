@@ -132,6 +132,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                         let code = options.code.clone();
                         let duration = options.sleep_duration.clone();
                         let kill_flag = self.kumir_state.kill_flag.clone();
+                        let scene_is_dirty = self.kumir_state.scene_is_dirty.clone();
                         thread::spawn(move || {
                             info!("Starting runtime");
 

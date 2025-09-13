@@ -192,10 +192,12 @@ pub struct KumirState {
     // pub visual_mode: VisualMode,
     pub min_point: Pos2,
     pub kill_flag: Arc<AtomicBool>,
+    pub scene_is_dirty: Arc<AtomicBool>,
 }
 
 impl KumirState {
     pub fn new(scene: Arc<Mutex<Scene>>, width: f64, height: f64) -> KumirState {
+        let scene_is_dirty = Arc::new(AtomicBool::new(true));
         let none = Modes::None(Arc::new(Mutex::new(NoneSelected::new())));
         let kuznechik = Modes::Kuznechik(Arc::new(Mutex::new(NoneSelected::new())));
         let vodolei = Modes::Vodolei(Arc::new(Mutex::new(NoneSelected::new())));
@@ -205,6 +207,7 @@ impl KumirState {
             100.0,
             width / 2.0,
             height / 2.0,
+            scene_is_dirty.clone(),
         ))));
         let chertezhnik = Modes::Chertezhnik(Arc::new(Mutex::new(NoneSelected::new())));
         let cherepaha = Modes::Cherepaha(Arc::new(Mutex::new(NoneSelected::new())));
@@ -224,6 +227,7 @@ impl KumirState {
             // visual_mode: VisualMode::Dark,
             min_point: Pos2::new(10.0, 85.0),
             kill_flag: Default::default(),
+            scene_is_dirty,
         }
     }
 
@@ -282,5 +286,19 @@ impl KumirState {
 
     pub fn drag_stop(&mut self) {
         self.selected_mode.drag_stop();
+    }
+
+    pub fn poison_scene(&self) {
+        self.scene_is_dirty
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+    }
+    pub fn depoison_scene(&self) {
+        self.scene_is_dirty
+            .store(false, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    pub fn scene_is_dirty(&self) -> bool {
+        self.scene_is_dirty
+            .load(std::sync::atomic::Ordering::Relaxed)
     }
 }
