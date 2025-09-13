@@ -97,7 +97,7 @@ impl AppState {
             .expect("Failed to create device");
 
         let swapchain_capabilities = surface.get_capabilities(&adapter);
-        let selected_format = wgpu::TextureFormat::Rgba8Unorm;
+        let selected_format = wgpu::TextureFormat::Bgra8Unorm;
         let swapchain_format = swapchain_capabilities
             .formats
             .iter()
