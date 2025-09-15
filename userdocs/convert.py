@@ -53,7 +53,7 @@ def process_xml(file: str) -> str:
         print(f"XML parse error: {e}")
         return ""
     md_lines = []
-    unknown_tags = defaultdict(lambda: {'count': 0, 'attrs': set(), 'parents': set()}) # Словарь для уникальных тегов
+    unknown_tags = defaultdict(lambda: {'count': 0, 'attrs': set(), 'parents': set()})  # Словарь для уникальных тегов
     build_markdown(root, md_lines, level=1, unknown_tags=unknown_tags)
     # Добавляем таблицу неизвестных тегов в конец Markdown, если они есть
     if unknown_tags:
@@ -73,20 +73,23 @@ def build_markdown(elem, lines, level=1, unknown_tags=None, parent_tag=None):
     tag = elem.tag.lower()
     text = (elem.text or "").strip()
     tail = (elem.tail or "").strip()
-
     if tag == 'section':
         title_elem = elem.find('title')
         if title_elem is not None:
             lines.append(f"{'#' * (level + 1)} {title_elem.text.strip() if title_elem.text else ''}")
             lines.append("")
+        # Пропускаем обработку title
+        for child in elem:
+            if child.tag.lower() != 'title':
+                build_markdown(child, lines, level + 1, unknown_tags, tag)
     elif tag == 'title':
         lines.append(f"{'#' * level} {text}")
         lines.append("")
     elif tag == 'titleabbrev':
-        lines.append(f"# {text}")
+        lines.append(f"{'#' * level} {text}")
         lines.append("")
     elif tag == 'para':
-        para_text = text
+        para_text = (elem.text or "").strip()
         for child in elem:
             child_md = get_inline_markdown(child)
             para_text += child_md
@@ -136,6 +139,10 @@ def build_markdown(elem, lines, level=1, unknown_tags=None, parent_tag=None):
         title_text = title_element.text.strip() if title_element is not None and title_element.text else "Пример"
         lines.append(f"### {title_text}")
         lines.append("")
+        # Пропускаем обработку title
+        for child in elem:
+            if child.tag.lower() != 'title':
+                build_markdown(child, lines, level + 1, unknown_tags, tag)
     elif tag == 'programlisting':
         lang = elem.get('role', '').lower() or "text"
         code = etree.tostring(elem, method='text', encoding='unicode').strip()
@@ -151,7 +158,7 @@ def build_markdown(elem, lines, level=1, unknown_tags=None, parent_tag=None):
     elif tag == 'itemizedlist':
         lines.append("")
     elif tag == 'listitem':
-        item_text = text
+        item_text = (elem.text or "").strip()
         for child in elem:
             if child.tag.lower() == 'para':
                 item_text += get_inline_markdown(child, is_para=True)
@@ -217,7 +224,7 @@ def get_inline_markdown(elem, is_para=False):
     md = ""
     if tag == 'emphasis':
         role = elem.get('role', '').lower()
-        inner = text + ''.join(get_inline_markdown(c) for c in elem) + (elem.tail or "").strip()
+        inner = text + ''.join(get_inline_markdown(c) for c in elem)
         if role == 'bold':
             md = f"**{inner}**"
         elif role == 'italic':
@@ -233,7 +240,11 @@ def get_inline_markdown(elem, is_para=False):
     elif tag == 'parameter' or tag == 'function':
         md = f"`{text}`"
     elif tag == 'para' and is_para:
-        md = text + ''.join(get_inline_markdown(c) for c in elem)
+        md = (elem.text or "").strip()
+        for child in elem:
+            md += get_inline_markdown(child)
+            if child.tail:
+                md += child.tail.strip()
     else:
         md = text + ''.join(get_inline_markdown(c) for c in elem)
     return md
