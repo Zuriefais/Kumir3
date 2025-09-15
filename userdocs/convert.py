@@ -230,3 +230,5 @@ def get_inline_markdown(elem):
 input_file = 'userdocs_old_xml/ActorRobot.xml'
 output_file = 'robot.md'
 process_single_file(input_file, output_file)
+
+process_files_in_tree("userdocs_old_xml/")
