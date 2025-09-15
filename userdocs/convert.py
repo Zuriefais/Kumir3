@@ -53,7 +53,7 @@ def process_xml(file: str) -> str:
         print(f"XML parse error: {e}")
         return ""
     md_lines = []
-    unknown_tags = defaultdict(lambda: {'count': 0, 'attrs': set(), 'parents': set()})  # Словарь для уникальных тегов
+    unknown_tags = defaultdict(lambda: {'count': 0, 'attrs': set(), 'parents': set()}) # Словарь для уникальных тегов
     build_markdown(root, md_lines, level=1, unknown_tags=unknown_tags)
     # Добавляем таблицу неизвестных тегов в конец Markdown, если они есть
     if unknown_tags:
@@ -100,8 +100,8 @@ def build_markdown(elem, lines, level=1, unknown_tags=None, parent_tag=None):
         lines.append("")
     elif tag == 'funcsynopsisinfo':
         package = elem.find('package')
-        if package is not None:
-            lines.append(f"**Package:** {package.text.strip() if package.text else ''}")
+        if package is not None and package.text:
+            lines.append(f"**Пакет:** {package.text.strip()}")
             lines.append("")
     elif tag == 'funcprototype':
         func_def_element = elem.find('funcdef')
@@ -112,11 +112,25 @@ def build_markdown(elem, lines, level=1, unknown_tags=None, parent_tag=None):
             for param in elem.findall('paramdef'):
                 param_type = (param.text or "").strip()
                 param_name_elem = param.find('parameter')
-                param_name = param_name_elem.text.strip() if param_name_elem is not None else ""
-                param_list.append(f"{param_type} {param_name}".strip())
+                param_name = param_name_elem.text.strip() if param_name_elem is not None and param_name_elem.text else ""
+                param_list.append(f"{param_type} `{param_name}`".strip())
             params_str = ", ".join(param_list)
-            lines.append(f"**{return_type} `{function_name}`({params_str})**")
+            lines.append(f"**{return_type} `{function_name}` ({params_str})**")
             lines.append("")
+        # Пропускаем рекурсивную обработку дочерних элементов funcdef и function
+        for child in elem:
+            if child.tag.lower() not in ['funcdef', 'function', 'paramdef', 'parameter']:
+                build_markdown(child, lines, level + 1, unknown_tags, tag)
+        if tail:
+            lines.append(tail)
+            lines.append("")
+        return  # Завершаем обработку, чтобы избежать регистрации funcprototype как неизвестного
+    elif tag == 'funcdef' or tag == 'function':
+        # Эти теги обрабатываются внутри funcprototype, поэтому пропускаем их
+        pass
+    elif tag == 'paramdef' or tag == 'parameter':
+        # Эти теги также обрабатываются внутри funcprototype
+        pass
     elif tag == 'example':
         title_element = elem.find('title')
         title_text = title_element.text.strip() if title_element is not None and title_element.text else "Пример"
@@ -132,7 +146,7 @@ def build_markdown(elem, lines, level=1, unknown_tags=None, parent_tag=None):
     elif tag == 'article':
         pass
     elif tag == 'package':
-        lines.append(f"**Package:** {text}")
+        lines.append(f"**Пакет:** {text}")
         lines.append("")
     elif tag == 'itemizedlist':
         lines.append("")
@@ -188,11 +202,9 @@ def build_markdown(elem, lines, level=1, unknown_tags=None, parent_tag=None):
         print(f"Unknown tag: {tag}")
         if text:
             lines.append(text)
-
-    # Рекурсивно обрабатываем детей
+    # Рекурсивно обрабатываем детей, если не было возврата из функции
     for child in elem:
         build_markdown(child, lines, level + 1, unknown_tags, tag)
-
     # Добавляем tail, если есть
     if tail:
         lines.append(tail)
