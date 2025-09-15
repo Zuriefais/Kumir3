@@ -43,7 +43,7 @@ def process_xml(file: str) -> str:
     print("Loading", file)
     with open(file, "r", encoding="utf-8", errors="ignore") as f:
         content = f.read()
-    # Удаляем DOCTYPE и любые сущности, чтобы избежать ошибок парсинга
+    # Удаляем DOCTYPE и сущности, чтобы избежать ошибок парсинга
     content = re.sub(r'<!DOCTYPE\s+[^>]*?(?:\s*\[.*?\]\s*)?>|<!DOCTYPE\s+[^>]*>', '', content, flags=re.IGNORECASE | re.DOTALL)
     content = re.sub(r'<!ENTITY\s+[^>]*>', '', content, flags=re.IGNORECASE | re.DOTALL)
     parser = etree.XMLParser(dtd_validation=False, load_dtd=False, no_network=True, recover=True, remove_blank_text=True)
@@ -53,7 +53,7 @@ def process_xml(file: str) -> str:
         print(f"XML parse error: {e}")
         return ""
     md_lines = []
-    unknown_tags = defaultdict(lambda: {'count': 0, 'attrs': set(), 'parents': set()})  # Словарь для уникальных тегов
+    unknown_tags = defaultdict(lambda: {'count': 0, 'attrs': set(), 'parents': set()})
     build_markdown(root, md_lines, level=1, unknown_tags=unknown_tags)
     # Добавляем таблицу неизвестных тегов в конец Markdown, если они есть
     if unknown_tags:
@@ -73,30 +73,30 @@ def build_markdown(elem, lines, level=1, unknown_tags=None, parent_tag=None):
     tag = elem.tag.lower()
     text = (elem.text or "").strip()
     tail = (elem.tail or "").strip()
-    if tag == 'section':
+
+    if tag == 'article':
+        # Пропускаем article, обрабатываем только дочерние элементы
+        for child in elem:
+            build_markdown(child, lines, level, unknown_tags, tag)
+    elif tag == 'section':
         title_elem = elem.find('title')
         if title_elem is not None:
-            lines.append(f"{'#' * (level + 1)} {title_elem.text.strip() if title_elem.text else ''}")
+            title_text = (title_elem.text or "").strip()
+            lines.append(f"{'#' * (level + 1)} {title_text}")
             lines.append("")
-        # Пропускаем обработку title
         for child in elem:
             if child.tag.lower() != 'title':
                 build_markdown(child, lines, level + 1, unknown_tags, tag)
-    elif tag == 'title':
-        lines.append(f"{'#' * level} {text}")
-        lines.append("")
-    elif tag == 'titleabbrev':
-        lines.append(f"{'#' * level} {text}")
-        lines.append("")
+    elif tag == 'title' or tag == 'titleabbrev':
+        # Обрабатываем только, если не внутри section
+        if parent_tag != 'section':
+            lines.append(f"{'#' * level} {text}")
+            lines.append("")
     elif tag == 'para':
-        para_text = (elem.text or "").strip()
-        for child in elem:
-            child_md = get_inline_markdown(child)
-            para_text += child_md
-            if child.tail:
-                para_text += child.tail.strip()
-        lines.append(para_text)
-        lines.append("")
+        para_text = get_inline_markdown(elem, is_para=True)
+        if para_text:
+            lines.append(para_text)
+            lines.append("")
     elif tag == 'funcsynopsis':
         role = elem.get('role', '').capitalize()
         lines.append(f"### Синтаксис ({role}):")
@@ -120,26 +120,14 @@ def build_markdown(elem, lines, level=1, unknown_tags=None, parent_tag=None):
             params_str = ", ".join(param_list)
             lines.append(f"**{return_type} `{function_name}` ({params_str})**")
             lines.append("")
-        # Пропускаем рекурсивную обработку дочерних элементов funcdef и function
         for child in elem:
             if child.tag.lower() not in ['funcdef', 'function', 'paramdef', 'parameter']:
                 build_markdown(child, lines, level + 1, unknown_tags, tag)
-        if tail:
-            lines.append(tail)
-            lines.append("")
-        return  # Завершаем обработку, чтобы избежать регистрации funcprototype как неизвестного
-    elif tag == 'funcdef' or tag == 'function':
-        # Эти теги обрабатываются внутри funcprototype, поэтому пропускаем их
-        pass
-    elif tag == 'paramdef' or tag == 'parameter':
-        # Эти теги также обрабатываются внутри funcprototype
-        pass
     elif tag == 'example':
         title_element = elem.find('title')
         title_text = title_element.text.strip() if title_element is not None and title_element.text else "Пример"
         lines.append(f"### {title_text}")
         lines.append("")
-        # Пропускаем обработку title
         for child in elem:
             if child.tag.lower() != 'title':
                 build_markdown(child, lines, level + 1, unknown_tags, tag)
@@ -150,29 +138,18 @@ def build_markdown(elem, lines, level=1, unknown_tags=None, parent_tag=None):
         lines.append(code)
         lines.append("```")
         lines.append("")
-    elif tag == 'article':
-        pass
     elif tag == 'package':
         lines.append(f"**Пакет:** {text}")
         lines.append("")
-    elif tag == 'itemizedlist':
-        lines.append("")
-    elif tag == 'orderedlist':
+    elif tag == 'itemizedlist' or tag == 'orderedlist':
         lines.append("")
     elif tag == 'listitem':
-        # Определяем префикс в зависимости от родительского тега
         parent_is_ordered = parent_tag == 'orderedlist'
         prefix = "1." if parent_is_ordered else "-"
-        item_text = (elem.text or "").strip()
-        for child in elem:
-            if child.tag.lower() == 'para':
-                item_text += get_inline_markdown(child, is_para=True)
-            else:
-                item_text += get_inline_markdown(child)
-            if child.tail:
-                item_text += child.tail.strip()
-        lines.append(f"{prefix} {item_text}")
-        lines.append("")
+        item_text = get_inline_markdown(elem, is_para=False)
+        if item_text:
+            lines.append(f"{prefix} {item_text}")
+            lines.append("")
     elif tag == 'variablelist':
         lines.append("")
     elif tag == 'varlistentry':
@@ -182,16 +159,13 @@ def build_markdown(elem, lines, level=1, unknown_tags=None, parent_tag=None):
             term_text = term.text.strip() if term.text else ""
             lines.append(f"**{term_text}**")
         if listitem is not None:
-            item_text = ""
-            for child in listitem:
-                item_text += get_inline_markdown(child, is_para=True if child.tag.lower() == 'para' else False)
-                if child.tail:
-                    item_text += child.tail.strip()
-            lines.append(item_text)
-            lines.append("")
+            item_text = get_inline_markdown(listitem, is_para=False)
+            if item_text:
+                lines.append(item_text)
+                lines.append("")
     elif tag == 'emphasis':
         role = elem.get('role', '').lower()
-        inner_text = etree.tostring(elem, method='text', encoding='unicode').strip()
+        inner_text = get_inline_markdown(elem, is_para=False)
         if role == 'bold':
             lines.append(f"**{inner_text}**")
         elif role == 'italic':
@@ -199,11 +173,11 @@ def build_markdown(elem, lines, level=1, unknown_tags=None, parent_tag=None):
         else:
             lines.append(inner_text)
     elif tag == 'literal' or tag == 'code':
-        inner_text = etree.tostring(elem, method='text', encoding='unicode').strip()
+        inner_text = get_inline_markdown(elem, is_para=False)
         lines.append(f"`{inner_text}`")
     elif tag == 'link':
         href = elem.get('xlink:href', '')
-        inner_text = etree.tostring(elem, method='text', encoding='unicode').strip()
+        inner_text = get_inline_markdown(elem, is_para=False)
         lines.append(f"[{inner_text}]({href})")
     else:
         # Регистрируем неизвестный тег
@@ -214,11 +188,12 @@ def build_markdown(elem, lines, level=1, unknown_tags=None, parent_tag=None):
         print(f"Unknown tag: {tag}")
         if text:
             lines.append(text)
-    # Рекурсивно обрабатываем детей, если не было возврата из функции
+    # Рекурсивно обрабатываем дочерние элементы
     for child in elem:
-        build_markdown(child, lines, level + 1, unknown_tags, tag)
-    # Добавляем tail, если есть
-    if tail:
+        if tag not in ['para', 'emphasis', 'literal', 'code', 'link', 'listitem', 'varlistentry']:
+            build_markdown(child, lines, level + 1, unknown_tags, tag)
+    # Добавляем tail только после обработки всех дочерних элементов
+    if tail and tag not in ['para', 'emphasis', 'literal', 'code', 'link']:
         lines.append(tail)
         lines.append("")
 
@@ -237,7 +212,8 @@ def get_inline_markdown(elem, is_para=False):
         else:
             md = inner
     elif tag == 'literal' or tag == 'code':
-        md = f"`{text}`"
+        inner = text + ''.join(get_inline_markdown(c) for c in elem)
+        md = f"`{inner}`"
     elif tag == 'link':
         href = elem.get('xlink:href', '')
         inner = text + ''.join(get_inline_markdown(c) for c in elem)
@@ -245,7 +221,7 @@ def get_inline_markdown(elem, is_para=False):
     elif tag == 'parameter' or tag == 'function':
         md = f"`{text}`"
     elif tag == 'para' and is_para:
-        md = (elem.text or "").strip()
+        md = text
         for child in elem:
             md += get_inline_markdown(child)
             if child.tail:
