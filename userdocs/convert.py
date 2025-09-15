@@ -157,7 +157,12 @@ def build_markdown(elem, lines, level=1, unknown_tags=None, parent_tag=None):
         lines.append("")
     elif tag == 'itemizedlist':
         lines.append("")
+    elif tag == 'orderedlist':
+        lines.append("")
     elif tag == 'listitem':
+        # Определяем префикс в зависимости от родительского тега
+        parent_is_ordered = parent_tag == 'orderedlist'
+        prefix = "1." if parent_is_ordered else "-"
         item_text = (elem.text or "").strip()
         for child in elem:
             if child.tag.lower() == 'para':
@@ -166,7 +171,7 @@ def build_markdown(elem, lines, level=1, unknown_tags=None, parent_tag=None):
                 item_text += get_inline_markdown(child)
             if child.tail:
                 item_text += child.tail.strip()
-        lines.append(f"- {item_text}")
+        lines.append(f"{prefix} {item_text}")
         lines.append("")
     elif tag == 'variablelist':
         lines.append("")
