@@ -8,5 +8,9 @@ indexmap = "2.10.0"
 wasm_thread = "*"
 
 kumir_gui = { path = "crates/kumir_gui" }
+kumir_gui_docs_macros = {path = "crates/kumir_gui_docs_macros"}
 kumir_lang = { path = "crates/kumir_lang" }
 kumir_runtime = { path = "crates/kumir_runtime" }
+
+egui = { version = "0.31.1" }
+egui_commonmark = {version = "0.20", features = ["macros", "better_syntax_highlighting",]}

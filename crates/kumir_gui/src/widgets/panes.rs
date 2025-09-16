@@ -1,5 +1,6 @@
 use crate::kumir_state::{KumirState, Modes};
 use crate::runtime_requirements::GuiRuntimeRequirements;
+use crate::widgets::docs::Docs;
 use crate::widgets::{robot_gui::RobotWidget, terminal::Terminal};
 use egui::Ui;
 use egui::{Align2, Sense, TextureId, load::SizedTexture};
@@ -30,18 +31,21 @@ pub enum Pane {
     Terminal,
     IDE(IDEWindowOptions),
     Vello(Arc<Mutex<VelloWindowOptions>>),
+    Docs,
 }
 
 pub struct TreeBehavior<'a> {
     pub kumir_state: &'a mut KumirState,
+    pub docs: &'a mut Docs,
     ide_theme: CodeTheme,
 }
 
 impl<'a> TreeBehavior<'a> {
-    pub fn new(kumir_state: &'a mut KumirState) -> Self {
+    pub fn new(kumir_state: &'a mut KumirState, docs: &'a mut Docs) -> Self {
         Self {
-            kumir_state: kumir_state,
+            kumir_state,
             ide_theme: CodeTheme::default(),
+            docs,
         }
     }
 }
@@ -50,9 +54,10 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
     fn tab_title_for_pane(&mut self, pane: &Pane) -> egui::WidgetText {
         match pane {
             Pane::Unknown(u) => format!("{u}").into(),
-            Pane::Terminal => "Terminal".to_string().into(),
+            Pane::Terminal => format!("Terminal").into(),
             Pane::IDE(_) => "IDE".to_string().into(),
             Pane::Vello(_) => "Vello window".to_string().into(),
+            Pane::Docs => format!("Docs").into(),
         }
     }
     fn pane_ui(
@@ -68,17 +73,9 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                 ui.style_mut().visuals.extreme_bg_color = egui::Color32::DARK_GRAY; // Title bar color
                 ui.style_mut().visuals.widgets.hovered.bg_fill = egui::Color32::GRAY; // Hover effect
                 ui.style_mut().spacing.item_spacing = egui::vec2(0.0, 0.0); // No spacing
-                ui.add_space(4.0); // Left padding
-                ui.label(format!(
-                    "Pane {}",
-                    match pane {
-                        Pane::Unknown(nr) => format!("{nr}"),
-                        Pane::Terminal => "Terminal".to_string(),
-                        Pane::IDE(_) => "IDE".to_string(),
-                        Pane::Vello(_) => "Vello".to_string(),
-                    }
-                )); // Title text
-                ui.allocate_space(ui.available_size()); // Fill remaining space
+                ui.add_space(4.0);
+                ui.label(self.tab_title_for_pane(pane));
+                ui.allocate_space(ui.available_size());
                 ui.interact(
                     ui.max_rect(),
                     ui.id().with("title_bar"),
@@ -257,6 +254,9 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior<'_> {
                     }
                 }
             }
+            Pane::Docs => {
+                self.docs.ui(ui);
+            }
         }
         if title_bar_response.drag_started() {
             egui_tiles::UiResponse::DragStarted
@@ -286,6 +286,7 @@ pub fn create_tree(vello_options: Arc<Mutex<VelloWindowOptions>>) -> egui_tiles:
         sleep_duration: 200,
     })));
     tabs.push(tiles.insert_pane(Pane::Terminal));
+    tabs.push(tiles.insert_pane(Pane::Docs));
 
     let root = tiles.insert_tab_tile(tabs);
 

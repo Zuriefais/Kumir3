@@ -7,6 +7,13 @@ run_web:
   RUSTFLAGS='--cfg=web_sys_unstable_apis --cfg=getrandom_backend="wasm_js" -C target-feature=+atomics,+bulk-memory' \
   trunk serve
 
+#!/bin/fish
+run_web_release:
+  cd crates/kumir_gui && \
+  RUSTFLAGS='--cfg=web_sys_unstable_apis --cfg=getrandom_backend="wasm_js" -C target-feature=+atomics,+bulk-memory' \
+  trunk serve --release
+
+
 run_lang:
     RUST_LOG=info cargo run --package kumir_lang
 
