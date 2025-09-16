@@ -1,7 +1,7 @@
 use crate::egui_tools::EguiRenderer;
-use crate::gruvbox_egui::gruvbox_dark_theme;
 use crate::gui::KumirGui;
 use crate::kumir_state::KumirState;
+use crate::styles::{default_dark::default_dark_theme, gruvbox_egui::gruvbox_dark_theme};
 use crate::widgets::panes::VelloWindowOptions;
 use egui_wgpu::wgpu::SurfaceError;
 use egui_wgpu::{ScreenDescriptor, wgpu};
@@ -119,7 +119,24 @@ impl AppState {
         surface.configure(&device, &surface_config);
 
         let egui_renderer = EguiRenderer::new(&device, surface_config.format, None, 1, &window);
-        egui_renderer.context().set_style(gruvbox_dark_theme());
+
+        // Set default egui font
+        let mut fonts = egui::FontDefinitions::default();
+        fonts.font_data.insert(
+            "Adwaita Sans".to_owned(),
+            Arc::new(egui::FontData::from_static(include_bytes!(
+                "styles/AdwaitaSans-Regular.ttf"
+            ))),
+        );
+        fonts
+            .families
+            .get_mut(&egui::FontFamily::Proportional)
+            .unwrap()
+            .insert(0, "Adwaita Sans".to_owned());
+        egui_renderer.context().set_fonts(fonts);
+
+        // Set egui style
+        egui_renderer.context().set_style(default_dark_theme());
 
         let scale_factor = 1.0;
         let vello_window_options: Arc<Mutex<VelloWindowOptions>> = Default::default();
