@@ -224,7 +224,7 @@ def get_inline_markdown(elem):
         if child.tail and child.tail.strip():
             md_parts.append(child.tail.strip())
 
-    return " ".join(md_parts).replace("--" , "-")
+    return " ".join(md_parts).replace("--" , "-").replace("\t", "")
 
 # Example usage for single file:
 input_file = 'userdocs_old_xml/ActorRobot.xml'
