@@ -16,6 +16,8 @@ struct DocsInput {
     cache: Expr,
     _comma2: Token![,],
     path: LitStr,
+    _comma3: Token![,],
+    selected: Expr,
 }
 
 impl Parse for DocsInput {
@@ -26,6 +28,8 @@ impl Parse for DocsInput {
             cache: input.parse()?,
             _comma2: input.parse()?,
             path: input.parse()?,
+            _comma3: input.parse()?,
+            selected: input.parse()?,
         })
     }
 }
@@ -33,7 +37,11 @@ impl Parse for DocsInput {
 #[proc_macro]
 pub fn docs(input: TokenStream) -> TokenStream {
     let DocsInput {
-        ui, cache, path, ..
+        ui,
+        cache,
+        path,
+        selected,
+        ..
     } = parse_macro_input!(input as DocsInput);
 
     let path_string = path.value();
@@ -48,7 +56,32 @@ pub fn docs(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         {
-            #( egui_commonmark::commonmark_str!(#ui, #cache, #md_file_paths); )*
+
+            egui::ComboBox::from_id_salt("mode")
+                .selected_text(&**#selected)
+                .show_ui(#ui, |ui| {
+                    #(
+
+                        let full_path = #md_file_paths.to_owned();
+                        let display_label = std::path::Path::new(&full_path)
+                            .file_name()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or(&full_path)
+                            .to_owned();
+
+                        ui.selectable_value(
+                            #selected,
+                            full_path,
+                            display_label,
+                        );
+                    )*
+                });
+
+            #(
+                if *#selected == #md_file_paths {
+                    egui_commonmark::commonmark_str!(#ui, #cache, #md_file_paths);
+                }
+            )*
         }
     };
 
