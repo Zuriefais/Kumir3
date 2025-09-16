@@ -15,7 +15,7 @@ egui_tiles = "0.12.0"
 egui_commonmark = {workspace = true}
 
 kumir_runtime = { workspace = true }
-kumir_gui_docs_macros = {workspace = true }
+kumir_gui_docs = {workspace = true }
 
 winit = "0.30.9"
 wasm_thread = {workspace=true}

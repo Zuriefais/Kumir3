@@ -1,4 +1,3 @@
-pub mod docs;
 pub mod panes;
 pub mod robot_gui;
 pub mod terminal;

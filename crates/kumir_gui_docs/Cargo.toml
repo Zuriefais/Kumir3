@@ -1,0 +1,9 @@
+[package]
+name = "kumir_gui_docs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+egui_commonmark = {workspace=true}
+egui = {workspace = true}
+kumir_gui_docs_macros = {workspace = true }

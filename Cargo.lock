@@ -1724,7 +1724,7 @@ dependencies = [
  "egui_tiles",
  "env_logger 0.11.8",
  "getrandom 0.3.3",
- "kumir_gui_docs_macros",
+ "kumir_gui_docs",
  "kumir_runtime",
  "log",
  "pollster",
@@ -1737,6 +1737,15 @@ dependencies = [
  "web-time",
  "wgpu 24.0.5",
  "winit",
+]
+
+[[package]]
+name = "kumir_gui_docs"
+version = "0.1.0"
+dependencies = [
+ "egui",
+ "egui_commonmark",
+ "kumir_gui_docs_macros",
 ]
 
 [[package]]

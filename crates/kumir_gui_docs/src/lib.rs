@@ -1,8 +1,7 @@
-use egui::{Ui, Widget};
-use egui_commonmark::{CommonMarkCache, commonmark_str};
+use egui::Ui;
+use egui_commonmark::CommonMarkCache;
 
 use kumir_gui_docs_macros::docs;
-use web_time::Instant;
 
 pub struct Docs {
     cache: CommonMarkCache,

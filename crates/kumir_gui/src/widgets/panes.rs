@@ -1,10 +1,10 @@
 use crate::kumir_state::{KumirState, Modes};
 use crate::runtime_requirements::GuiRuntimeRequirements;
-use crate::widgets::docs::Docs;
 use crate::widgets::{robot_gui::RobotWidget, terminal::Terminal};
 use egui::Ui;
 use egui::{Align2, Sense, TextureId, load::SizedTexture};
 use egui_extras::syntax_highlighting::{CodeTheme, highlight};
+use kumir_gui_docs::Docs;
 use kumir_runtime::{Lang, Runtime};
 use log::{error, info};
 use std::sync::{Arc, Mutex};

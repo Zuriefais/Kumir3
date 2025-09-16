@@ -1,12 +1,12 @@
 use std::sync::{Arc, Mutex};
 
 use crate::kumir_state::{self, KumirState};
-use crate::widgets::docs::Docs;
 use crate::widgets::panes::{Pane, TreeBehavior, VelloWindowOptions, create_tree};
 use crate::widgets::usage_diagnostics::UsageDiagnostics;
 use egui::Context;
 use egui::Widget;
 
+use kumir_gui_docs::Docs;
 use vello::peniko::color::{AlphaColor, Srgb};
 
 pub struct KumirGui {
