@@ -45,7 +45,7 @@ jobs:
 
       - name: Install a specific version of Binaryen
         run: |
-          WASM_OPT_VERSION="126"
+          WASM_OPT_VERSION="124"
           BINARYEN_URL="https://github.com/WebAssembly/binaryen/releases/download/version_${WASM_OPT_VERSION}/binaryen-version_${WASM_OPT_VERSION}-x86_64-linux.tar.gz"
 
           # Download and extract the tarball
