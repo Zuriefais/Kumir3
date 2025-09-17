@@ -3,6 +3,7 @@ name: Build kumir3 for web with trunk
 on:
   push:
     branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: read
