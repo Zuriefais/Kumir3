@@ -4,7 +4,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use std::{
     error::Error,
-    fs::read_dir,
+    fs::{self, read_dir},
     path::{Path, PathBuf},
 };
 use syn::parse::{Parse, ParseStream};
@@ -54,25 +54,27 @@ pub fn docs(input: TokenStream) -> TokenStream {
         panic!("No .md files found in directory '{}'", path.display());
     }
 
+    let file_titles = get_file_titles(&md_file_paths)
+        .unwrap_or_else(|e| panic!("Failed to get file title '{}': {}", path.display(), e));
+
     let expanded = quote! {
         {
-
+            use std::collections::HashMap;
+            let mut selected_names_map: HashMap<String, String> = HashMap::new();
+            #(
+                selected_names_map.insert(#md_file_paths.to_string(), #file_titles.to_string());
+            )*
             egui::ComboBox::from_id_salt("mode")
-                .selected_text(&**#selected)
+                .selected_text(selected_names_map.get(&**#selected).unwrap_or(&"No value selected".to_string()))
                 .show_ui(#ui, |ui| {
                     #(
 
                         let full_path = #md_file_paths.to_owned();
-                        let display_label = std::path::Path::new(&full_path)
-                            .file_name()
-                            .and_then(|s| s.to_str())
-                            .unwrap_or(&full_path)
-                            .to_owned();
 
                         ui.selectable_value(
                             #selected,
                             full_path,
-                            display_label,
+                            #file_titles,
                         );
                     )*
                 });
@@ -86,6 +88,21 @@ pub fn docs(input: TokenStream) -> TokenStream {
     };
 
     expanded.into()
+}
+
+fn get_file_titles(paths: &Vec<String>) -> Result<Vec<String>, Box<dyn Error>> {
+    paths
+        .iter()
+        .map(|path| {
+            let file: String = fs::read_to_string(path)?;
+            let title = file
+                .lines()
+                .next()
+                .ok_or(format!("Error file is empty"))?
+                .replace('#', "");
+            Ok(title)
+        })
+        .collect()
 }
 
 fn expand_dir(path: &Path) -> Result<Vec<String>, Box<dyn Error>> {
