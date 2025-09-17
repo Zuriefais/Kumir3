@@ -1,0 +1,78 @@
+name: Build kumir3 for web with trunk
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust (nightly)
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: wasm32-unknown-unknown
+
+      # Cache Cargo registry, index, target/, and cargo bin (Trunk)
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }} # optional safety
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          cache-directories: |
+            ~/.cargo/bin   # <-- this keeps trunk
+
+      - name: Ensure Trunk is installed
+        run: |
+          if ! command -v trunk &>/dev/null; then
+            cargo install trunk
+          else
+            echo "✅ Trunk already cached"
+          fi
+
+      - name: Install Binaryen (for wasm-opt)
+        run: sudo apt-get update && sudo apt-get install -y binaryen
+
+      - name: Build web
+        run: |
+          cd crates/kumir_gui
+          RUSTFLAGS="--cfg=web_sys_unstable_apis \
+                     --cfg=getrandom_backend=\"wasm_js\" \
+                     -C target-feature=+atomics,+bulk-memory \
+                     -C opt-level=z \
+                     -C codegen-units=1 \
+                     -C strip=debuginfo" \
+          trunk build --release
+          echo "✅ Running wasm-opt for size optimization..."
+          for f in dist/*.wasm; do
+              [ -f "$f" ] || continue
+              echo "Before: $(stat -c%s "$f") bytes → $f"
+              wasm-opt -Oz -o "$f.opt" "$f" && mv "$f.opt" "$f"
+              echo "After: $(stat -c%s "$f") bytes"
+          done
+
+      - name: Upload build output
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: crates/kumir_gui/dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
